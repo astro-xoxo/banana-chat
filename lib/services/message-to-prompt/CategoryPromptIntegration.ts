@@ -5,6 +5,7 @@
 
 import { CategoryPromptService } from '../category-prompt';
 import { ClaudeClient } from '@/lib/claude';
+import { ClaudePromptConverter } from './ClaudePromptConverter';
 import type {
   MessageToPromptService,
   MessageContext,
@@ -16,6 +17,7 @@ import { ERROR_CODES } from './types';
 
 export class CategoryPromptIntegrationService implements MessageToPromptService {
   private categoryService: CategoryPromptService;
+  private claudeConverter: ClaudePromptConverter;
   private isInitialized = false;
   private stats = {
     total_conversions: 0,
@@ -30,6 +32,9 @@ export class CategoryPromptIntegrationService implements MessageToPromptService 
     // Claude 클라이언트 초기화
     const claudeClient = new ClaudeClient();
     this.categoryService = new CategoryPromptService(claudeClient);
+    
+    // 새로운 Claude 프롬프트 변환기 초기화
+    this.claudeConverter = new ClaudePromptConverter();
   }
 
   /**
@@ -84,24 +89,40 @@ export class CategoryPromptIntegrationService implements MessageToPromptService 
         user_preferences: context.user_preferences
       });
 
-      // 새로운 카테고리 프롬프트 서비스 사용 - 캐릭터 정보 전달
-      const categoryPrompt = await this.categoryService.convertMessageToPrompt(
+      // 🚀 새로운 Claude 기반 프롬프트 변환 사용 (원본 프로젝트 로직 적용)
+      const claudeResult = await this.claudeConverter.convertMessageToPrompt(
         messageContent,
-        {
-          gender: context.gender as 'male' | 'female' || 'female',
-          chatHistory: context.chat_history,
-          qualityLevel: this.mapQualityLevel(options.quality_level),
-          // ✅ 실제 챗봇 데이터 전달
-          userPreferences: context.user_preferences ? {
-            age: context.user_preferences.age,
-            gender: context.user_preferences.gender,
-            relationship: context.user_preferences.relationship,
-            name: context.user_preferences.name,
-            personality: context.user_preferences.personality,
-            concept: context.user_preferences.concept
-          } : undefined
-        }
+        context
       );
+
+      if (!claudeResult.success) {
+        throw new Error(`Claude 변환 실패: ${claudeResult.error}`);
+      }
+
+      // Claude 결과를 기존 형식으로 변환
+      const categoryPrompt = {
+        positive_prompt: claudeResult.positive_prompt,
+        negative_prompt: claudeResult.negative_prompt,
+        quality_score: 85, // Claude 기반은 기본 85점
+        generation_info: {
+          template_used: 'claude_based',
+          categories_filled: claudeResult.analysis_info.detected_objects.length,
+          gender: context.gender || 'female',
+          message_type: claudeResult.analysis_info.message_type,
+          detected_elements: {
+            objects: claudeResult.analysis_info.detected_objects,
+            emotions: claudeResult.analysis_info.detected_emotions,
+            actions: claudeResult.analysis_info.detected_actions
+          }
+        },
+        category_breakdown: {
+          method: 'claude_ai_analysis',
+          message_type: claudeResult.analysis_info.message_type,
+          elements_detected: claudeResult.analysis_info.detected_objects.length + 
+                           claudeResult.analysis_info.detected_emotions.length +
+                           claudeResult.analysis_info.detected_actions.length
+        }
+      };
 
       // 기존 형식으로 변환
       const result: ConversionResult = {
