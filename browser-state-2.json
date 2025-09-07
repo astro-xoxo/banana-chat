@@ -1,0 +1,61 @@
+{
+  "cookies": [
+    {
+      "name": "SNID",
+      "value": "ABablndqbiF7B-ZjDrzQtivzfPHYIwVb2CQTn8k9VKwbLeYtYCJxoAiz-thk51xDmshJf0fixruGF4Hswy8Tph5Gj9ONw2lUsQ",
+      "domain": ".google.com",
+      "path": "/verify",
+      "expires": 1772805664.808677,
+      "httpOnly": true,
+      "secure": true,
+      "sameSite": "Lax"
+    },
+    {
+      "name": "AEC",
+      "value": "AVh_V2go1K9E27RpO_w9-ea72m7RlazCmhnyZAFohzjcbZTES7Czxb5XgFI",
+      "domain": ".google.com",
+      "path": "/",
+      "expires": 1772546464.711308,
+      "httpOnly": true,
+      "secure": true,
+      "sameSite": "Lax"
+    },
+    {
+      "name": "NID",
+      "value": "525=gY7OYOlKmfvVvEj0dJUmDJeovjj5SSPAAZzPIJ7xTb6tyur1R-zHwoLzPHp3t4tN5okVgNs-HurQ5d3utSXVdeMZ3uLjqzZG0F4gKK6LzoCXwpQtTd8R8WSGmGw9Pq8bNOR35EoeOSDIhrSwmo_I2OtB99eHVCId3NZlsOohiC0GZtAGKiVcj7kl39N2XTRnjCMz47v3-FhvUE4KNhQVP3nARR-lnOyIMQvAjO9cf9eXDQUKqJhAzG2wTW8OasIWGqN_",
+      "domain": ".google.com",
+      "path": "/",
+      "expires": 1772805664.238379,
+      "httpOnly": true,
+      "secure": true,
+      "sameSite": "None"
+    }
+  ],
+  "origins": [
+    {
+      "origin": "https://www.google.com",
+      "localStorage": [
+        {
+          "name": "sb_wiz.sr_di",
+          "value": "GIec--e6rJb8Lxiei7nrn9yiyN4BGO2JurzV0-baDxi1oOj_3o-NwIABGPycg5zotuq_lwE"
+        },
+        {
+          "name": "sb_wiz.pq_tm_hp",
+          "value": "1757002443750"
+        },
+        {
+          "name": "sb_wiz.qc",
+          "value": "7"
+        },
+        {
+          "name": "sb_wiz.sc_pq",
+          "value": ""
+        },
+        {
+          "name": "sb_wiz.pq",
+          "value": "LobeChat 인터페이스 디자인 가이드"
+        }
+      ]
+    }
+  ]
+}

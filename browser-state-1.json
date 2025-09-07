@@ -1,0 +1,75 @@
+{
+  "cookies": [
+    {
+      "name": "SNID",
+      "value": "ABablnch881J9_8ryvhco7HstTL1wBQ3Qhr2Zw2xXQvLprn7as8-LmDsEPhF5jq5ZAaY7Ql1AMEjiljBf4YdcHj-ZCOm7_xbNgU",
+      "domain": ".google.com",
+      "path": "/verify",
+      "expires": 1772805664.812676,
+      "httpOnly": true,
+      "secure": true,
+      "sameSite": "Lax"
+    },
+    {
+      "name": "AEC",
+      "value": "AVh_V2jBuPdIsd2oa3YkZN_plORprXSI3Zx34Kj3d0P4Fg6gYRMi3rc0Lzs",
+      "domain": ".google.com",
+      "path": "/",
+      "expires": 1772546464.746001,
+      "httpOnly": true,
+      "secure": true,
+      "sameSite": "Lax"
+    },
+    {
+      "name": "NID",
+      "value": "525=G4s-eJmcbnURFSAskjLBjOS8SEdt9WWWFj7kl9yIXiE9WIrnKIvWJS6YDuJ36SCUVWEG8ygR0yRN0H4xdGLiqyagGWkRm66pmRC02Nsq8FVBpFFFQk2UraWBE2_kFi33Zx0NeFhhaEhUZ_gLq0T0R-80m8L7wowLWdb-ZZ6heqQiVvEaF8FJsP_4_gW2EwDJfLeXOyMJTPRFp_Gl_xKouFhzmAnse09rUJEVNFJ59X6ZNksx6WnmOcHEfbxqEBMuWiWiqQ",
+      "domain": ".google.com",
+      "path": "/",
+      "expires": 1772805664.14669,
+      "httpOnly": true,
+      "secure": true,
+      "sameSite": "None"
+    },
+    {
+      "name": "DV",
+      "value": "s_-mPBdlzpYV0J-HU_sc0edCuBpYkRk",
+      "domain": "www.google.com",
+      "path": "/",
+      "expires": 1757003044,
+      "httpOnly": false,
+      "secure": false,
+      "sameSite": "Lax"
+    }
+  ],
+  "origins": [
+    {
+      "origin": "https://www.google.com",
+      "localStorage": [
+        {
+          "name": "sb_wiz.zpc.gws-wiz-serp.",
+          "value": "{\"0\":[[\"Assistant-ui\",0,[512,308,357,439,650,362,394],{\"zl\":90000}],[\"Chatbot UI\",0,[512,308,357,439,650,362,394],{\"zl\":90000}],[\"ChatGPT ui GitHub\",0,[512,308,357,439,650,362,394],{\"zl\":90000}],[\"Cult ui\",0,[512,308,357,439,650,362,394],{\"zl\":90000}],[\"Github lobe chat\",0,[512,308,357,439,650,362,394],{\"zl\":90000}],[\"LobeChat 설치\",0,[512,308,357,439,650,362,394],{\"zl\":90000}],[\"Chat UI\",0,[512,308,357,439,650,362,394],{\"zl\":90000}],[\"Antd component\",0,[512,308,357,439,650,362,394],{\"zl\":90000}],[\"Eldora UI\",0,[512,308,357,439,650,362,394],{\"zl\":90000}],[\"LobeChat API\",0,[512,308,357,439,650,362,394],{\"zl\":90000}]],\"1\":{\"ag\":{\"a\":{\"90000\":[\"최근 검색어와 관련이 있음\",\"\",\"\",7]}},\"av\":\"-3950681677237305870\",\"q\":\"PHPVEwF92rIzFogBiuByl1S-4LU\"}}"
+        },
+        {
+          "name": "sb_wiz.pq_tm_hp",
+          "value": "1757002443963"
+        },
+        {
+          "name": "sb_wiz.pq",
+          "value": "LobeChat UI 컴포넌트 디자인"
+        },
+        {
+          "name": "sb_wiz.sr_di",
+          "value": "GJ6jn_Gh4oeAZBj4ie-uipKc3t0BGLWg6P_ej43AgAEY08rxrf_Vu4jEARjV8K-5itS133k"
+        },
+        {
+          "name": "sb_wiz.qc",
+          "value": "8"
+        },
+        {
+          "name": "sb_wiz.sc_pq",
+          "value": ""
+        }
+      ]
+    }
+  ]
+}

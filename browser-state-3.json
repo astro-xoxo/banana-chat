@@ -1,0 +1,75 @@
+{
+  "cookies": [
+    {
+      "name": "SNID",
+      "value": "ABablndK5c8NbF0e7Wyail9_jdUj6choYut_CThyywfLmWSaqaC3G5z8nn8MHUO2pAossoy2t38J1CMkdC1YAfgZsGLNFlcv8Q",
+      "domain": ".google.com",
+      "path": "/verify",
+      "expires": 1772805664.883515,
+      "httpOnly": true,
+      "secure": true,
+      "sameSite": "Lax"
+    },
+    {
+      "name": "AEC",
+      "value": "AVh_V2jqQkrAzbXd8KiGycOUUibdJtx0mEB9oAGI3cFP-G1SJO13_ou5RQ",
+      "domain": ".google.com",
+      "path": "/",
+      "expires": 1772546464.736865,
+      "httpOnly": true,
+      "secure": true,
+      "sameSite": "Lax"
+    },
+    {
+      "name": "NID",
+      "value": "525=cA0J8CvVVL_DXDGYDu7qDjyaXTVtWEwbMPovBtUcINLe6VoIluoQaKq83atzcLT_5wWjMfS2XdcAlJB5fmsHSlV2r_B5S5HDcBaYQa1xKB42ZSNYnaLOC1xLYdREsUa0elHqhuXdF9knndSXddyJVBWa6lyxOXgT7AzkyRpiZtDQAeBJf_X8LOP59_VbAXZxvCgE959Dtq-0zr9lI5QUP6u-E_gWt3lnOYnyqrkpW_KUYax1O6K4rDDz3kX0Zgm57b0",
+      "domain": ".google.com",
+      "path": "/",
+      "expires": 1772805664.658424,
+      "httpOnly": true,
+      "secure": true,
+      "sameSite": "None"
+    },
+    {
+      "name": "DV",
+      "value": "s4AIBm3AFg4cMMNiN6YW-ga07E5SkRk",
+      "domain": "www.google.com",
+      "path": "/",
+      "expires": 1756996966,
+      "httpOnly": false,
+      "secure": false,
+      "sameSite": "Lax"
+    }
+  ],
+  "origins": [
+    {
+      "origin": "https://www.google.com",
+      "localStorage": [
+        {
+          "name": "sb_wiz.zpc.gws-wiz-serp.",
+          "value": "{\"0\":[[\"antd message\",0,[512,308,468,357,439,650,362,394],{\"zl\":90000}],[\"ant design chat ui\",0,[512,308,468,357,439,650,362,394],{\"zl\":90000}],[\"ant design x\",0,[512,308,468,357,439,650,362,394],{\"zl\":90000}],[\"antd chat ui\",0,[512,308,468,357,439,650,362,394],{\"zl\":90000}],[\"ant design message\",0,[512,308,468,357,439,650,362,394],{\"zl\":90000}],[\"ant design components\",0,[512,308,468,357,439,650,362,394],{\"zl\":90000}],[\"ant design vs material ui\",0,[512,308,468,357,439,650,362,394],{\"zl\":90000}],[\"ant design mobile\",0,[512,308,468,357,439,650,362,394],{\"zl\":90000}],[\"ant design react native\",0,[512,308,468,357,439,650,362,394],{\"zl\":90000}],[\"ant design figma\",0,[512,308,468,357,439,650,362,394],{\"zl\":90000}]],\"1\":{\"ag\":{\"a\":{\"90000\":[\"최근 검색어와 관련이 있음\",\"\",\"\",7]}},\"av\":\"2043831446914780310\",\"q\":\"hZ7GQ54QGJUFpTdCNV-C_vWpvjM\"}}"
+        },
+        {
+          "name": "sb_wiz.pq_tm_hp",
+          "value": "1756996366417"
+        },
+        {
+          "name": "sb_wiz.pq",
+          "value": "Ant Design chat components CSS source"
+        },
+        {
+          "name": "sb_wiz.sr_di",
+          "value": "GNmQwc7lofmp7wEYpca8j6GU2dmvARjjh_2zy-257rgBGMTxtYHsn_fpDRi23vaz_v2Vq28"
+        },
+        {
+          "name": "sb_wiz.qc",
+          "value": "6"
+        },
+        {
+          "name": "sb_wiz.sc_pq",
+          "value": ""
+        }
+      ]
+    }
+  ]
+}

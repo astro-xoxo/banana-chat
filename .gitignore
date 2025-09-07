@@ -1,0 +1,223 @@
+# dependencies
+/node_modules
+/.pnp
+.pnp.js
+.yarn/install-state.gz
+
+# testing
+/coverage
+
+# next.js
+/.next/
+/out/
+
+# production
+/build
+
+# misc
+.DS_Store
+*.pem
+
+# debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# local env files
+.env*.local
+# Keep .env and .env.production for deployment configuration
+
+# vercel
+.vercel
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts
+
+# IDE and Tool Configuration
+.idea
+.vscode/*
+!.vscode/extensions.json
+.cursor/
+.roo/
+.roomodes
+.taskmasterconfig
+.windsurfrules
+
+# Analysis and Debug Scripts
+analyze_*.js
+debug_*.js
+test_*.js
+check_*.js
+day*_*.js
+*_analysis.js
+*_debug.js
+*_test.js
+*_check.js
+
+# Log Files
+*.log
+server.log
+server_test.log
+comfyui_server.log
+
+# Backup Files
+*.bak
+*.backup
+*_before_*.js
+*_broken_*.js
+*_before_*.json
+*_broken_*.json
+
+# Log Directory (specific pattern)
+00_log/
+
+# Include essential guide directory  
+!01_guide/
+!01_guide/**
+
+# Documentation (except essential)
+*.md
+!README.md
+!BRANCH_STRATEGY_GUIDE.md
+!01_guide/*.md
+dashboard-analysis.md
+profile_image_error_analysis.md
+
+# SQL Scripts
+*.sql
+
+# Result Files
+*_results.json
+*-results-*.json
+scheduler-stability-*.json
+
+# Shell Scripts
+*.sh
+
+# Python Scripts
+*.py
+
+# Test HTML Files
+*.html
+!public/**/*.html
+
+# Temporary and Setup Files
+temp_*.js
+setup_*.js
+simulate_*.js
+perform_*.js
+manual_*.js
+mass_*.js
+final_*.js
+complete_*.js
+comprehensive_*.js
+detailed_*.js
+quick_*.js
+simple_*.js
+step*_*.js
+phase*_*.js
+refactoring_*.js
+option_*.js
+implementation_*.js
+system_*.js
+validate_*.js
+verify_*.js
+find_*.js
+fix_*.js
+extend_*.js
+drop_*.js
+remove_*.js
+reset_*.js
+update_*.js
+create_*.js
+add_*.js
+query_*.js
+quota_*.js
+
+# Config Backups
+tsconfig_*.json
+next.config_*.js
+
+# Worker and Server Files
+image_generation_worker.js
+mock_comfyui_server.py
+start_worker.sh
+
+# API Test Files
+test_api_*.sh
+test_*.sh
+
+# Database Files
+supabase_simple_queries.sql
+quick_quota_queries.sql
+quota_charge_queries.sql
+force_fix_constraint.sql
+fix_database_schema.sql
+extend_users_table.sql
+fix_generation_status_constraint.sql
+
+# Specific Folders to Exclude
+front\ api\ call\ guide/
+local_sd_server/
+
+# Additional Scripts to Exclude
+add-missing-columns.js
+analyze-data-consistency.js
+auto-connect-unlinked.js
+basic_individual_connection.js
+check-dashboard-data.js
+check-recent-data.js
+check-storage.js
+check-table.js
+check-tables.js
+check-users-table.js
+compare_db_api_response.js
+dashboard-data-test.js
+database.types.backup.ts
+db_analyze.js
+deduct_quota.js
+extend-users-table.js
+final-test-summary.js
+jobs_analyze.js
+real_id_connection.js
+preset_analyze.js
+profile_preset_analyze.js
+validate-final-consistency.js
+
+# Test Files
+test-*.js
+test-*.ts
+test_*.json
+analyze-*.js
+comprehensive-*.js
+quick-*.js
+*-test.js
+*-test.ts
+
+# Production Analysis Files  
+step3_production_analysis.json
+step5_integration_test_corrected.json
+
+# API Files
+middleware.api.ts
+
+# Added by Claude Task Master
+# Logs
+logs
+dev-debug.log
+# Dependency directories
+node_modules/
+# Environment variables
+.env
+# Editor directories and files
+.vscode
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+# OS specific
+# Task files
+tasks.json
+tasks/ 

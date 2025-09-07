@@ -1,0 +1,61 @@
+{
+  "cookies": [
+    {
+      "name": "SNID",
+      "value": "ABablnfb64bK3wZ99PGATcCJ9dau5CyVDh5bIymT5iX6ti6v-4MgsRVbC2KQ64KYHzSD1jxrlu6dFYX0H3cecYxnI_5ZtLGEM0I",
+      "domain": ".google.com",
+      "path": "/verify",
+      "expires": 1772805664.142949,
+      "httpOnly": true,
+      "secure": true,
+      "sameSite": "Lax"
+    },
+    {
+      "name": "AEC",
+      "value": "AVh_V2hTYW_-JYydchQga9k6rVi5LYarib_y16fyzS_qV_ejkHIFOK6Ryw",
+      "domain": ".google.com",
+      "path": "/",
+      "expires": 1772546464.7147,
+      "httpOnly": true,
+      "secure": true,
+      "sameSite": "Lax"
+    },
+    {
+      "name": "NID",
+      "value": "525=ND4AEni71qiXN8cyPfBlon76z8t7NkzzdW85-90OT8LyJNlo-NQKPzWOynHyIN1E1yxkBmPtc-g_nZesGpQ3JrsEKm1_EEq-Wt-fgdOduFy96DEfl81gijvf-JpKwAthBw3VVwruWIdyyCAcARY-s9D9wyD-Ap3UEz46IdM9spulK5IzRKsWaXuuAAlVrfO78RfAiiMVbGTD2-kG8MLsfytEsXCQA5DiDpLqEdYvkdvcV9QrQTcCRQmtKujZhy2PUfk4-A",
+      "domain": ".google.com",
+      "path": "/",
+      "expires": 1772805664.137876,
+      "httpOnly": true,
+      "secure": true,
+      "sameSite": "None"
+    }
+  ],
+  "origins": [
+    {
+      "origin": "https://www.google.com",
+      "localStorage": [
+        {
+          "name": "sb_wiz.sr_di",
+          "value": "null"
+        },
+        {
+          "name": "sb_wiz.pq_tm_hp",
+          "value": "1757002443775"
+        },
+        {
+          "name": "sb_wiz.qc",
+          "value": "8"
+        },
+        {
+          "name": "sb_wiz.sc_pq",
+          "value": ""
+        },
+        {
+          "name": "sb_wiz.pq",
+          "value": "LobeChat 디자인 시스템"
+        }
+      ]
+    }
+  ]
+}

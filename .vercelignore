@@ -1,0 +1,39 @@
+# 로그 파일들 (용량 최적화)
+00_log/
+*.log
+logs/
+
+# Next.js 빌드 캐시 (용량 최적화)
+.next/cache/
+.next/trace
+
+# 개발 도구 및 캐시
+.DS_Store
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# 테스트 파일들
+__tests__/
+*.test.js
+*.test.ts
+*.test.tsx
+*.spec.js
+*.spec.ts
+*.spec.tsx
+
+# 문서 파일들
+claudedocs/
+*.md
+!README.md
+
+# 임시 파일들
+tmp/
+temp/
+.tmp
+
+# 개발 전용 스크립트
+scripts/dev/
+scripts/debug/
