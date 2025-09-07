@@ -63,14 +63,14 @@ export interface MessageContext {
     relationship_type?: string;
     visual_characteristics?: string;
   };
-  // ✅ 캐릭터 정보를 위한 user_preferences 추가
+  // ✅ 실제 챗봇 데이터를 위한 user_preferences 추가
   user_preferences?: {
     age?: number;
     gender?: string;
     relationship?: string;
     name?: string;
-    preferred_style?: string;
-    art_style?: string;
+    personality?: string;
+    concept?: string;
   };
 }
 

@@ -108,8 +108,18 @@ export async function POST(request: NextRequest): Promise<NextResponse<ChatImage
       gender: chatbot.gender,
       chat_history: [], // TODO: 이전 채팅 기록 추가 가능
       user_preferences: {
-        preferred_style: 'natural',
-        art_style: 'realistic'
+        // ✅ 실제 챗봇 데이터 사용
+        age: chatbot.age,
+        gender: chatbot.gender,
+        relationship: chatbot.relationship,
+        name: chatbot.name,
+        personality: chatbot.personality,
+        concept: chatbot.concept
+      },
+      chatbot_info: {
+        personality: chatbot.personality,
+        relationship_type: chatbot.relationship,
+        visual_characteristics: chatbot.concept
       }
     }, {
       quality_level: 'high',

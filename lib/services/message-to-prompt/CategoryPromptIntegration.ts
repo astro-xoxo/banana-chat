@@ -91,12 +91,14 @@ export class CategoryPromptIntegrationService implements MessageToPromptService 
           gender: context.gender as 'male' | 'female' || 'female',
           chatHistory: context.chat_history,
           qualityLevel: this.mapQualityLevel(options.quality_level),
-          // ✅ 캐릭터 정보 전달
+          // ✅ 실제 챗봇 데이터 전달
           userPreferences: context.user_preferences ? {
             age: context.user_preferences.age,
             gender: context.user_preferences.gender,
             relationship: context.user_preferences.relationship,
-            name: context.user_preferences.name
+            name: context.user_preferences.name,
+            personality: context.user_preferences.personality,
+            concept: context.user_preferences.concept
           } : undefined
         }
       );
