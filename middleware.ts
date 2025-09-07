@@ -15,6 +15,7 @@ export async function middleware(req: NextRequest) {
 export const config = {
   matcher: [
     /*
+     * 임시로 미들웨어 완전 비활성화 - API 간섭 문제 해결
      * Match all request paths except for the ones starting with:
      * - api (API routes)
      * - _next/static (static files)
@@ -22,6 +23,6 @@ export const config = {
      * - favicon.ico (favicon file)
      * - auth/callback (OAuth callback)
      */
-    '/((?!api|_next/static|_next/image|favicon.ico|auth/callback).*)',
+    // '/((?!api|_next/static|_next/image|favicon.ico|auth/callback).*)',
   ],
 }

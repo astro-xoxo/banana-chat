@@ -3,22 +3,25 @@
 
 import { ImageGenerationService, GenerateProfileParams, ProfileResult } from './mockImageService'
 
-// Gemini API 타입 정의
+// Gemini API 타입 정의 (올바른 형식)
 interface GeminiImageRequest {
-  prompt: string
-  aspectRatio?: 'SQUARE' | 'LANDSCAPE' | 'PORTRAIT'
-  personGeneration?: 'ALLOW' | 'DISALLOW'
-  safetySettings?: Array<{
-    category: string
-    threshold: string
+  contents: Array<{
+    parts: Array<{
+      text: string
+    }>
   }>
 }
 
 interface GeminiImageResponse {
   candidates?: Array<{
-    image: {
-      imageUrl: string
-      altText?: string
+    content: {
+      parts: Array<{
+        text?: string
+        inlineData?: {
+          mimeType: string
+          data: string
+        }
+      }>
     }
     finishReason: string
     safetyRatings?: Array<{
@@ -36,7 +39,7 @@ interface GeminiImageResponse {
 // NanoBanana API 클라이언트
 export class NanoBananaService implements ImageGenerationService {
   private readonly apiKey: string
-  private readonly baseUrl: string = 'https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-001:generateImage'
+  private readonly baseUrl: string = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image-preview:generateContent'
   private readonly timeout: number = 60000 // 1분 타임아웃
 
   constructor() {
@@ -59,29 +62,13 @@ export class NanoBananaService implements ImageGenerationService {
       const imagePrompt = this.createProfilePrompt(params)
       console.log('📝 생성된 프롬프트:', imagePrompt)
       
-      // Gemini API 요청 구성
+      // Gemini API 요청 구성 (올바른 형식)
       const requestBody: GeminiImageRequest = {
-        prompt: imagePrompt,
-        aspectRatio: 'SQUARE', // 프로필 이미지는 정사각형
-        personGeneration: 'ALLOW', // 인물 생성 허용
-        safetySettings: [
-          {
-            category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT',
-            threshold: 'BLOCK_LOW_AND_ABOVE'
-          },
-          {
-            category: 'HARM_CATEGORY_HATE_SPEECH', 
-            threshold: 'BLOCK_MEDIUM_AND_ABOVE'
-          },
-          {
-            category: 'HARM_CATEGORY_HARASSMENT',
-            threshold: 'BLOCK_MEDIUM_AND_ABOVE'
-          },
-          {
-            category: 'HARM_CATEGORY_DANGEROUS_CONTENT',
-            threshold: 'BLOCK_MEDIUM_AND_ABOVE'
-          }
-        ]
+        contents: [{
+          parts: [{
+            text: imagePrompt
+          }]
+        }]
       }
 
       // API 호출
@@ -130,13 +117,70 @@ export class NanoBananaService implements ImageGenerationService {
         throw new Error(`이미지 생성이 안전성 정책으로 인해 중단되었습니다: ${candidate.finishReason}`)
       }
 
-      const imageUrl = candidate.image.imageUrl
+      // 이미지 데이터 추출 (base64 형식)
+      const imagePart = candidate.content.parts.find(part => part.inlineData?.mimeType.startsWith('image/'))
+      if (!imagePart || !imagePart.inlineData) {
+        throw new Error('생성된 이미지 데이터를 찾을 수 없습니다')
+      }
+
+      // base64 이미지를 Supabase Storage에 저장
+      const imageBuffer = Buffer.from(imagePart.inlineData.data, 'base64')
+      const timestamp = Date.now()
+      const randomStr = Math.random().toString(36).substring(2, 8)
+      const fileName = `profile-${params.user_id}-${timestamp}-${randomStr}.png`
+      
+      // Supabase 클라이언트 생성
+      const { createClient } = await import('@supabase/supabase-js')
+      const supabase = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!
+      )
+
+      // generated-images 버킷에 저장
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('generated-images')
+        .upload(fileName, imageBuffer, {
+          contentType: 'image/png',
+          cacheControl: '3600',
+          upsert: false
+        })
+
+      if (uploadError) {
+        console.error('🍌 이미지 저장 실패:', uploadError)
+        throw new Error(`이미지 저장에 실패했습니다: ${uploadError.message}`)
+      }
+
+      // 공개 URL 생성
+      const { data: publicUrlData } = supabase.storage
+        .from('generated-images')
+        .getPublicUrl(fileName)
+
+      const imageUrl = publicUrlData.publicUrl
       const generationTime = Date.now() - startTime
 
-      console.log('🍌 NanoBanana 이미지 생성 완료:', {
+      // 데이터베이스에 이미지 정보 저장
+      const { error: dbError } = await supabase
+        .from('generated_images')
+        .insert({
+          session_id: params.user_id,
+          image_type: 'profile',
+          original_prompt: imagePrompt,
+          processed_prompt: imagePrompt,
+          image_url: imageUrl,
+          storage_path: uploadData.path,
+          generation_time_ms: generationTime
+        })
+
+      if (dbError) {
+        console.warn('🍌 이미지 DB 저장 실패 (이미지는 생성됨):', dbError)
+        // DB 저장 실패해도 이미지는 생성되었으므로 계속 진행
+      }
+
+      console.log('🍌 NanoBanana 이미지 생성 및 저장 완료:', {
         imageUrl,
         generationTime,
-        altText: candidate.image.altText
+        mimeType: imagePart.inlineData.mimeType,
+        fileName
       })
 
       return {
@@ -146,7 +190,8 @@ export class NanoBananaService implements ImageGenerationService {
         metadata: {
           service: 'nanobanana',
           prompt: imagePrompt,
-          altText: candidate.image.altText,
+          fileName: fileName,
+          mimeType: imagePart.inlineData.mimeType,
           safetyRatings: candidate.safetyRatings
         }
       }

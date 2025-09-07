@@ -4,7 +4,7 @@
  */
 
 import { NextRequest } from 'next/server';
-import { POST, GET } from '@/app/api/chat/generate-message-image/route';
+import { POST, GET } from '@/app/api/generate/chat-image-nanobanana/route';
 
 // Mock dependencies
 jest.mock('@/lib/supabase-server', () => ({
@@ -23,7 +23,7 @@ import { createAuthenticatedServerClient } from '@/lib/supabase-server';
 import { callComfyUIServer } from '@/lib/comfyui/client';
 import { getMessageToPromptService } from '@/lib/services/message-to-prompt';
 
-describe('/api/chat/generate-message-image', () => {
+describe('/api/generate/chat-image-nanobanana', () => {
   let mockSupabase: any;
   let mockMessageToPromptService: any;
 
@@ -82,11 +82,11 @@ describe('/api/chat/generate-message-image', () => {
     jest.clearAllMocks();
   });
 
-  describe('POST /api/chat/generate-message-image', () => {
+  describe('POST /api/generate/chat-image-nanobanana', () => {
     const createMockRequest = (body: any) => {
       return {
         json: jest.fn().mockResolvedValue(body),
-        url: 'http://localhost:3000/api/chat/generate-message-image'
+        url: 'http://localhost:3000/api/generate/chat-image-nanobanana'
       } as unknown as NextRequest;
     };
 
@@ -556,9 +556,9 @@ describe('/api/chat/generate-message-image', () => {
     });
   });
 
-  describe('GET /api/chat/generate-message-image', () => {
+  describe('GET /api/generate/chat-image-nanobanana', () => {
     const createMockRequest = (searchParams: Record<string, string>) => {
-      const url = new URL('http://localhost:3000/api/chat/generate-message-image');
+      const url = new URL('http://localhost:3000/api/generate/chat-image-nanobanana');
       Object.entries(searchParams).forEach(([key, value]) => {
         url.searchParams.set(key, value);
       });

@@ -51,6 +51,10 @@ interface ChatMessageWithActionsProps {
   // 챗봇 정보 추가
   chatbotName?: string;
   chatbotImage?: string;
+  // 세션 정보 추가 (이미지 생성용)
+  sessionId?: string;
+  chatbotId?: string;
+  chatSessionId?: string;
 }
 
 export const ChatMessageWithActions: React.FC<ChatMessageWithActionsProps> = ({
@@ -58,7 +62,10 @@ export const ChatMessageWithActions: React.FC<ChatMessageWithActionsProps> = ({
   onImageGenerated,
   className = '',
   chatbotName = 'AI Assistant',
-  chatbotImage
+  chatbotImage,
+  sessionId,
+  chatbotId,
+  chatSessionId
 }) => {
   const [showActions, setShowActions] = useState(false);
 
@@ -189,6 +196,9 @@ export const ChatMessageWithActions: React.FC<ChatMessageWithActionsProps> = ({
               existingImages={message.metadata?.images?.map(img => img.url) || []}
               onImageGenerated={handleImageGenerated}
               className="flex-shrink-0"
+              sessionId={sessionId}
+              chatbotId={chatbotId}
+              chatSessionId={chatSessionId}
             />
           </div>
         )}

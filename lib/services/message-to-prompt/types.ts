@@ -45,7 +45,8 @@ export interface GeneratedPrompt {
 export interface MessageContext {
   message_id: string;
   session_id?: string;
-  content: string;
+  content?: string;
+  message_content?: string;  // API 호환성을 위한 별칭
   gender?: 'male' | 'female';
   chat_history?: Array<{
     role: 'user' | 'assistant';
@@ -68,6 +69,8 @@ export interface MessageContext {
     gender?: string;
     relationship?: string;
     name?: string;
+    preferred_style?: string;
+    art_style?: string;
   };
 }
 

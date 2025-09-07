@@ -20,6 +20,10 @@ interface MessageImageGenerationProps {
   existingImages?: string[];
   onImageGenerated?: (imageUrl: string, promptInfo: any) => void;
   className?: string;
+  // 추가: NanoBanana API 요구사항
+  sessionId?: string;
+  chatbotId?: string;
+  chatSessionId?: string;
 }
 
 interface GenerationResponse {
@@ -41,7 +45,10 @@ export const MessageImageGeneration: React.FC<MessageImageGenerationProps> = ({
   messageContent,
   existingImages = [],
   onImageGenerated,
-  className = ''
+  className = '',
+  sessionId,
+  chatbotId,
+  chatSessionId
 }) => {
   const [isGenerating, setIsGenerating] = useState(false);
 
@@ -114,23 +121,36 @@ export const MessageImageGeneration: React.FC<MessageImageGenerationProps> = ({
     setIsGenerating(true);
 
     try {
-      // 요청 바디 구성
-      const requestBody: any = {
-        message_id: normalizedMessageId,  // 정규화된 ID 전송
-        quality_level: 'high',
-      };
-
-      // 임시 메시지인 경우 메시지 내용도 함께 전송
-      if (isTempId) {
-        requestBody.message_content = messageContent;
-        console.log('🔄 임시 메시지용 요청 바디:', {
-          message_id: normalizedMessageId,
-          content_preview: messageContent.substring(0, 50) + '...',
-          content_length: messageContent.length
+      // NanoBanana API 필수 필드 검증
+      if (!sessionId || !chatbotId) {
+        console.error('❌ 필수 세션 정보가 없습니다:', { sessionId, chatbotId });
+        toast.error('오류', {
+          description: '세션 정보가 없어 이미지를 생성할 수 없습니다.',
+          duration: 3000,
         });
+        return;
       }
 
-      const response = await fetch('/api/chat/generate-message-image', {
+      // 요청 바디 구성 (NanoBanana API 형식)
+      const requestBody: any = {
+        session_id: sessionId,
+        chatbot_id: chatbotId,
+        chat_session_id: chatSessionId,
+        chat_message_id: normalizedMessageId,
+        message_content: messageContent,
+        aspect_ratio: 'LANDSCAPE'
+      };
+
+      console.log('🔄 NanoBanana API 요청 바디:', {
+        session_id: sessionId,
+        chatbot_id: chatbotId,
+        chat_session_id: chatSessionId,
+        chat_message_id: normalizedMessageId,
+        content_preview: messageContent.substring(0, 50) + '...',
+        content_length: messageContent.length
+      });
+
+      const response = await fetch('/api/generate/chat-image-nanobanana', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

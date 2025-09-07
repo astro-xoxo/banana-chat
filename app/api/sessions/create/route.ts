@@ -89,8 +89,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<SessionCr
       .insert({
         session_id,
         created_at: created_at || currentTime,
-        last_activity: last_activity || currentTime,
-        is_active: true
+        last_activity: last_activity || currentTime
       })
       .select('id, session_id')
       .single()

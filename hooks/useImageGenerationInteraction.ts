@@ -86,7 +86,7 @@ export const useImageGenerationInteraction = ({
   const checkGenerationCapability = useCallback(async (): Promise<boolean> => {
     try {
       const response = await fetch(
-        `/api/chat/generate-message-image?message_id=${messageId}`,
+        `/api/generate/chat-image-nanobanana?message_id=${messageId}`,
         {
           method: 'GET',
           headers: { 'Content-Type': 'application/json' },
@@ -175,7 +175,7 @@ export const useImageGenerationInteraction = ({
     abortControllerRef.current = new AbortController();
 
     try {
-      const response = await fetch('/api/chat/generate-message-image', {
+      const response = await fetch('/api/generate/chat-image-nanobanana', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

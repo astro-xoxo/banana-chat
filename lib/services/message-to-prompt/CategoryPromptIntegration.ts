@@ -42,6 +42,16 @@ export class CategoryPromptIntegrationService implements MessageToPromptService 
   }
 
   /**
+   * 메시지를 프롬프트로 변환 (API 호환용 메소드)
+   */
+  async convert(
+    context: MessageContext,
+    options: ConversionOptions = {}
+  ): Promise<ConversionResult> {
+    return await this.convertMessageToPrompt(context, options);
+  }
+
+  /**
    * 메시지를 프롬프트로 변환 (기존 인터페이스 호환)
    */
   async convertMessageToPrompt(
@@ -63,9 +73,20 @@ export class CategoryPromptIntegrationService implements MessageToPromptService 
         quality_level: options.quality_level
       });
 
+      // 메시지 내용 추출 (API 호환성)
+      const messageContent = context.content || context.message_content || '';
+      
+      console.log('📝 메시지 내용 확인:', {
+        content: context.content,
+        message_content: context.message_content,
+        final_content: messageContent,
+        gender: context.gender,
+        user_preferences: context.user_preferences
+      });
+
       // 새로운 카테고리 프롬프트 서비스 사용 - 캐릭터 정보 전달
       const categoryPrompt = await this.categoryService.convertMessageToPrompt(
-        context.content || '',
+        messageContent,
         {
           gender: context.gender as 'male' | 'female' || 'female',
           chatHistory: context.chat_history,

@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { createSupabaseClient } from '@/lib/supabase-client'
+import { useAnonymousSession } from '@/components/auth/AnonymousProvider'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -16,7 +17,6 @@ import { ChatMessageWithActions } from '@/components/chat/ChatMessageWithActions
 import { DateSeparator } from '@/components/chat/DateSeparator'
 import { splitIntoSentences, validateSentences } from '@/lib/messageUtils'
 import { RetryButton } from '@/components/chat/RetryButton'
-import { useQuota } from '@/hooks/useQuota'
 
 interface ChatMessage {
   id: string
@@ -43,11 +43,12 @@ interface Chatbot {
   name: string
   profile_image_url: string
   user_uploaded_image_url: string
-  relationship_type: string
+  relationship: string
   gender: string
-  personality_description: string
-  speech_preset_id: string | null
-  concept_id: string | null
+  personality: string
+  concept: string
+  age: number
+  session_id: string
   is_active: boolean
   created_at: string
 }
@@ -100,9 +101,22 @@ function ChatPage({ params }: ChatPageProps) {
   const [isLoading, setIsLoading] = useState(true)
   const [isSending, setIsSending] = useState(false)
   const [isTyping, setIsTyping] = useState(false)
-  const [user, setUser] = useState<any>(null)
   const [error, setError] = useState<string>('')
-  const [sessionId, setSessionId] = useState<string | null>(null)
+  const [chatSessionId, setChatSessionId] = useState<string | null>(null)
+  
+  // 익명 세션 관리
+  const { session } = useAnonymousSession()
+  
+  // sessionId 변수 명시적 정의 (오류 방지) - 안전한 참조
+  const sessionId = session?.sessionId || ''
+  
+  // 전역 sessionId 설정으로 undefined 오류 완전 방지
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      // 전역 sessionId 변수 설정 (에러 방지용)
+      (window as any).sessionId = sessionId || session?.sessionId || ''
+    }
+  }, [sessionId, session?.sessionId])
   
   // Phase 4: 접근성 - 사용자 환경설정 감지
   const prefersReducedMotion = usePrefersReducedMotion()
@@ -121,8 +135,7 @@ function ChatPage({ params }: ChatPageProps) {
   const messagesContainerRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
   
-  // 할당량 훅
-  const { quotas } = useQuota()
+  // 익명 시스템에서는 할당량 제한 없음
   
   // 설정값
   const ENABLE_SENTENCE_SPLIT = true
@@ -221,16 +234,9 @@ function ChatPage({ params }: ChatPageProps) {
     }, 300);
   }, []);
   
-  // ✅ Phase 4-6 Step 3: 안전한 구조의 sendMessage 함수
+  // ✅ Phase 4-6 Step 3: 안전한 구조의 sendMessage 함수 (익명 세션 버전)
   const sendMessage = async () => {
-    if (!newMessage.trim() || !chatbot || !user || !sessionId || isSending) return;
-    
-    // 할당량 확인
-    const chatQuota = quotas.find(q => q.type === 'chat_messages');
-    if (!chatQuota || !chatQuota.canUse) {
-      alert('오늘의 채팅 할당량을 모두 사용했습니다.');
-      return;
-    }
+    if (!newMessage.trim() || !chatbot || !session?.sessionId || !chatSessionId || isSending) return;
     
     setIsSending(true);
     const messageContent = newMessage.trim();
@@ -242,7 +248,7 @@ function ChatPage({ params }: ChatPageProps) {
       content: messageContent,
       role: 'user',
       created_at: new Date().toISOString(),
-      session_id: sessionId
+      session_id: chatSessionId
     };
     
     setMessages(prev => [...prev, userMessage]);
@@ -253,29 +259,23 @@ function ChatPage({ params }: ChatPageProps) {
     scrollToBottom();
     
     try {
-      // Claude API 호출
-      const supabase = createSupabaseClient();
-      const { data: { session } } = await supabase.auth.getSession();
+      // 요청 데이터 로깅 - API에 필요한 필드만 전송
+      const requestData = {
+        message: messageContent,
+        chatbot_id: chatbot.id,
+        chat_session_id: chatSessionId,
+        session_id: session.sessionId,
+        generate_image: false
+      };
+      console.log('🔧 [DEBUG] Claude API 요청 데이터:', requestData);
       
-      if (!session?.access_token) {
-        throw new Error('인증 토큰이 없습니다. 다시 로그인해주세요.');
-      }
-      
-      const response = await fetch('/api/chat/claude', {
+      // Claude API 호출 (익명 세션 버전)
+      const response = await fetch('/api/chat/claude-banana', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`
+          'Content-Type': 'application/json'
         },
-        body: JSON.stringify({
-          message: messageContent,
-          chatbot_id: chatbot.id,
-          session_id: sessionId,
-          concept_id: chatbot.concept_id,
-          speech_preset_id: chatbot.speech_preset_id,
-          gender: chatbot.gender,
-          relationship_type: chatbot.relationship_type
-        })
+        body: JSON.stringify(requestData)
       });
       
       if (!response.ok) {
@@ -285,31 +285,34 @@ function ChatPage({ params }: ChatPageProps) {
       
       const data = await response.json();
       
+      // 응답 데이터 처리
+      const assistantResponse = data.assistant_response || '';
+      
       // Phase 4-9 Step 2: 클라이언트 측 응답 길이 모니터링 로그
-      console.log(`📏 Phase 4-9: 클라이언트 수신 응답 길이 - ${data.response?.length || 0}자 (목표: 200자 이내)`);
-      if (data.response && data.response.length > 250) {
+      console.log(`📏 Phase 4-9: 클라이언트 수신 응답 길이 - ${assistantResponse.length || 0}자 (목표: 200자 이내)`);
+      if (assistantResponse && assistantResponse.length > 250) {
         console.warn('⚠️ Phase 4-9: 클라이언트에서 긴 응답 감지 - 끊김 가능성 체크:', {
-          response_length: data.response.length,
-          first_50_chars: data.response.substring(0, 50) + '...',
-          last_50_chars: '...' + data.response.substring(data.response.length - 50)
+          response_length: assistantResponse.length,
+          first_50_chars: assistantResponse.substring(0, 50) + '...',
+          last_50_chars: '...' + assistantResponse.substring(assistantResponse.length - 50)
         });
-      } else if (data.response) {
+      } else if (assistantResponse) {
         console.log('✅ Phase 4-9: 클라이언트 응답 길이 정상 범위 - 끊김 방지 효과 확인');
       }
       
       // 빈 응답 처리
-      if (!data.response || data.response.trim() === '') {
-        data.response = '죄송해요, 응답을 생성하는데 문제가 있었어요. 다시 말씀해 주세요.';
-      }
+      const finalResponse = (!assistantResponse || assistantResponse.trim() === '') 
+        ? '죄송해요, 응답을 생성하는데 문제가 있었어요. 다시 말씀해 주세요.'
+        : assistantResponse;
       
       // ✅ Phase 1~4-5 기능 보존: 문장별 메시지 생성 및 순차 표시
-      if (ENABLE_SENTENCE_SPLIT && data.response && data.response.trim().length > 0) {
+      if (ENABLE_SENTENCE_SPLIT && finalResponse && finalResponse.trim().length > 0) {
         try {
-          const sentences = splitIntoSentences(data.response);
+          const sentences = splitIntoSentences(finalResponse);
           const validatedSentences = validateSentences(sentences);
           
           if (validatedSentences && validatedSentences.length > 0) {
-            console.log(`🎯 Phase 4: ${data.response.length}자 응답을 ${validatedSentences.length}개 문장으로 분할`);
+            console.log(`🎯 Phase 4: ${finalResponse.length}자 응답을 ${validatedSentences.length}개 문장으로 분할`);
             
             // 문장별 메시지 객체 생성
             const aiMessages: ChatMessage[] = validatedSentences.map((sentence, index) => ({
@@ -317,7 +320,7 @@ function ChatPage({ params }: ChatPageProps) {
               content: sentence,
               role: 'assistant' as const,
               created_at: new Date().toISOString(),
-              session_id: sessionId,
+              session_id: chatSessionId,
               isSentencePart: true,
               sentenceIndex: index,
               totalSentences: validatedSentences.length
@@ -333,10 +336,10 @@ function ChatPage({ params }: ChatPageProps) {
           // 분할 실패 시 단일 메시지로 폴백
           const singleMessage: ChatMessage = {
             id: `ai-${Date.now()}`,
-            content: data.response,
+            content: finalResponse,
             role: 'assistant',
             created_at: new Date().toISOString(),
-            session_id: sessionId
+            session_id: chatSessionId
           };
           
           setMessages(prev => [...prev, singleMessage]);
@@ -346,10 +349,10 @@ function ChatPage({ params }: ChatPageProps) {
         // 분할 비활성화 시 단일 메시지로 처리
         const singleMessage: ChatMessage = {
           id: `ai-${Date.now()}`,
-          content: data.response,
+          content: finalResponse,
           role: 'assistant',
           created_at: new Date().toISOString(),
-          session_id: sessionId
+          session_id: chatSessionId
         };
         
         setMessages(prev => [...prev, singleMessage]);
@@ -382,23 +385,22 @@ function ChatPage({ params }: ChatPageProps) {
     }
   };
   
-  // 초기화 및 데이터 로딩
+  // 초기화 및 데이터 로딩 (익명 세션 버전)
   useEffect(() => {
     async function loadChatData() {
       console.log('📋 초기화: 채팅 데이터 로딩 시작');
+      
+      // 익명 세션 확인
+      if (!session?.sessionId) {
+        console.log('❌ 익명 세션이 없어서 메인 페이지로 리다이렉트');
+        router.push('/');
+        return;
+      }
+      
       try {
         const supabase = createSupabaseClient();
         
-        // 사용자 정보 확인
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session?.user) {
-          router.push('/login');
-          return;
-        }
-        
-        setUser(session.user);
-        
-        // 챗봇 정보 로딩 (user_uploaded_image_url 필드 명시적 포함)
+        // 챗봇 정보 로딩 (실제 데이터베이스 스키마에 맞게 수정)
         const { data: chatbotData, error: chatbotError } = await supabase
           .from('chatbots')
           .select(`
@@ -406,11 +408,12 @@ function ChatPage({ params }: ChatPageProps) {
             name,
             profile_image_url,
             user_uploaded_image_url,
-            relationship_type,
+            relationship,
             gender,
-            personality_description,
-            speech_preset_id,
-            concept_id,
+            personality,
+            concept,
+            age,
+            session_id,
             is_active,
             created_at
           `)
@@ -438,59 +441,80 @@ function ChatPage({ params }: ChatPageProps) {
         
         setChatbot(chatbotData);
         
-        // ✅ 세션 처리 로직 수정: 기존 세션 조회 후 새 세션 생성
-        let currentSessionId = sessionId;
-        if (!currentSessionId) {
-          // 1단계: 기존 세션 조회
-          console.log('🔍 기존 세션 조회 중:', { chatbot_id: params.id, user_id: session.user.id });
-          const { data: existingSession, error: findError } = await supabase
+        // ✅ 채팅 세션 처리 로직 (익명 세션 버전)
+        let currentChatSessionId = chatSessionId;
+        if (!currentChatSessionId) {
+          // 1단계: 기존 채팅 세션 조회
+          console.log('🔍 session 객체 전체:', session);
+          console.log('🔍 session.sessionId 타입:', typeof session?.sessionId);
+          console.log('🔍 session.sessionId 값:', session?.sessionId);
+          
+          const sessionIdForQuery = String(session?.sessionId || '');
+          console.log('🔍 강제 문자열 변환된 sessionId 타입:', typeof sessionIdForQuery);
+          console.log('🔍 강제 문자열 변환된 sessionId 값:', sessionIdForQuery);
+          console.log('🔍 원본 session.sessionId:', session?.sessionId);
+          console.log('🔍 원본 session.sessionId 타입:', typeof session?.sessionId);
+          console.log('🔍 기존 채팅 세션 조회 중:', { 
+            chatbot_id: params.id, 
+            session_id: sessionIdForQuery,
+            session_id_type: typeof sessionIdForQuery,
+            session_id_stringified: JSON.stringify(sessionIdForQuery),
+            raw_session: JSON.stringify(session)
+          });
+          
+          const { data: existingChatSession, error: findError } = await supabase
             .from('chat_sessions')
             .select('id')
             .eq('chatbot_id', params.id)
-            .eq('user_id', session.user.id)
-            .order('created_at', { ascending: false }) // started_at 대신 created_at 사용
+            .eq('session_id', sessionIdForQuery)
+            .order('created_at', { ascending: false })
             .limit(1)
-            .maybeSingle(); // single() 대신 maybeSingle() 사용하여 결과가 없어도 에러 발생 안함
+            .maybeSingle();
           
           if (findError) {
-            console.error('❌ 기존 세션 조회 실패:', findError);
+            console.error('❌ 기존 채팅 세션 조회 실패:', findError);
           }
           
-          if (existingSession) {
-            // 2단계: 기존 세션 사용
-            console.log('✅ 기존 세션 발견:', existingSession.id);
-            currentSessionId = existingSession.id;
-            setSessionId(currentSessionId);
+          if (existingChatSession) {
+            // 2단계: 기존 채팅 세션 사용
+            console.log('✅ 기존 채팅 세션 발견:', existingChatSession.id);
+            currentChatSessionId = existingChatSession.id;
+            setChatSessionId(currentChatSessionId);
           } else {
-            // 3단계: 새 세션 생성
-            console.log('📝 새 세션 생성 중...');
-            const { data: sessionData, error: sessionError } = await supabase
+            // 3단계: 새 채팅 세션 생성
+            console.log('📝 새 채팅 세션 생성 중...');
+            console.log('📝 생성할 세션 데이터:', {
+              chatbot_id: params.id,
+              session_id: sessionIdForQuery,
+              session_id_type: typeof sessionIdForQuery
+            });
+            
+            const { data: chatSessionData, error: chatSessionError } = await supabase
               .from('chat_sessions')
               .insert({
                 chatbot_id: params.id,
-                user_id: session.user.id
-                // started_at 제거: 데이터베이스에는 created_at만 존재하고 자동 생성됨
+                session_id: String(sessionIdForQuery)
               })
               .select()
               .single();
             
-            if (sessionError) {
-              console.error('❌ 새 세션 생성 실패:', sessionError);
+            if (chatSessionError) {
+              console.error('❌ 새 채팅 세션 생성 실패:', chatSessionError);
               setError('채팅 세션을 생성할 수 없습니다.');
               setIsLoading(false);
               return;
             }
-            console.log('✅ 새 세션 생성 완료:', sessionData.id);
-            currentSessionId = sessionData.id;
-            setSessionId(currentSessionId);
+            console.log('✅ 새 채팅 세션 생성 완료:', chatSessionData.id);
+            currentChatSessionId = chatSessionData.id;
+            setChatSessionId(currentChatSessionId);
             }
             }
         
-        // 기존 메시지 로딩
+        // 기존 메시지 로딩 (익명 세션 버전)
         const { data: messagesData, error: messagesError } = await supabase
           .from('chat_messages')
           .select('*')
-          .eq('session_id', currentSessionId)
+          .eq('chat_session_id', currentChatSessionId)
           .order('created_at', { ascending: true });
         
         if (messagesError) {
@@ -580,7 +604,7 @@ function ChatPage({ params }: ChatPageProps) {
         };
         
         loadChatData();
-        }, [params.id, router]);
+        }, [params.id, router, session?.sessionId]);
         
         // 메시지 추가 시 스크롤 - 렌더링 완료 대기 시간 증가
   useEffect(() => {
@@ -668,7 +692,7 @@ function ChatPage({ params }: ChatPageProps) {
           </div>
           <div>
             <h1 className="text-sm font-bold text-foreground">{chatbot.name}</h1>
-            <p className="text-xs text-muted capitalize">{chatbot.relationship_type} • 온라인</p>
+            <p className="text-xs text-muted capitalize">{chatbot.relationship} • 온라인</p>
           </div>
         </div>
       </div>
@@ -705,6 +729,9 @@ function ChatPage({ params }: ChatPageProps) {
             chatbotName={chatbot.name}
             chatbotImage={chatbot.profile_image_url}
             className="mb-4"
+            sessionId={session?.sessionId}
+            chatbotId={chatbot.id}
+            chatSessionId={chatSessionId}
           />
         ))}
         
@@ -737,10 +764,7 @@ function ChatPage({ params }: ChatPageProps) {
           </div>
           <button
             onClick={sendMessage}
-            disabled={!newMessage.trim() || isSending || (() => {
-              const chatQuota = quotas.find(q => q.type === 'chat_messages')
-              return !chatQuota || !chatQuota.canUse
-            })()}
+            disabled={!newMessage.trim() || isSending}
             className="min-w-button-sm min-h-button-sm bg-primary hover:bg-primary/90 disabled:bg-muted text-inverse rounded-2xl flex items-center justify-center transition-all duration-200 shadow-sm hover:shadow-hover disabled:cursor-not-allowed"
           >
             {isSending ? (
@@ -751,39 +775,6 @@ function ChatPage({ params }: ChatPageProps) {
           </button>
         </div>
         
-        {/* 할당량 표시 */}
-        <div className="flex justify-center mt-4">
-          <div className="bg-background rounded-2xl px-4 py-2 border border-border">
-            <span className="text-sm text-muted font-medium">
-              {(() => {
-                const chatQuota = quotas.find(q => q.type === 'chat_messages')
-                if (!chatQuota) return '💬 할당량 정보를 불러오는 중...'
-                const chatRemaining = chatQuota.limit - chatQuota.used
-                const percentage = (chatQuota.used / chatQuota.limit) * 100
-                return (
-                  <div className="flex flex-row items-center gap-2 sm:gap-3 justify-center flex-wrap">
-                    <div className="flex items-center gap-2 flex-shrink-0">
-                      <span>💬</span>
-                      <span className="text-foreground text-xs sm:text-sm">
-                        <span className="hidden xs:inline">일일 채팅: {chatQuota.used}/{chatQuota.limit}회</span>
-                        <span className="xs:hidden">{chatQuota.used}/{chatQuota.limit}</span>
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2 flex-shrink-0">
-                      <div className="w-12 sm:w-16 h-2 bg-muted rounded-full overflow-hidden">
-                        <div 
-                          className="h-full bg-primary transition-all duration-300 rounded-full"
-                          style={{ width: `${percentage}%` }}
-                        ></div>
-                      </div>
-                      <span className="text-sm">({chatRemaining}회 남음)</span>
-                    </div>
-                  </div>
-                )
-              })()}
-            </span>
-          </div>
-        </div>
       </div>
       
       {/* 에러 표시 */}
@@ -810,7 +801,7 @@ function ChatPage({ params }: ChatPageProps) {
                   context={{
                     operation: 'retry_message',
                     chatbotId: chatbot?.id,
-                    sessionId: sessionId || undefined
+                    sessionId: session?.sessionId || undefined
                   }}
                 />
               )}

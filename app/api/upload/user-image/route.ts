@@ -124,13 +124,11 @@ export async function POST(request: NextRequest): Promise<NextResponse<UploadRes
       .from('uploaded_images')
       .insert({
         session_id,
-        file_name: uniqueFileName,
-        original_name: file.name,
+        original_filename: file.name,
         file_size: file.size,
         mime_type: file.type,
-        storage_path: uploadData.path,
-        public_url: publicUrl,
-        upload_purpose: 'profile_reference' // 프로필 생성 참고용
+        image_url: publicUrl,
+        storage_path: uploadData.path
       })
       .select('id')
       .single()

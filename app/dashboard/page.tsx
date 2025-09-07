@@ -15,7 +15,7 @@ export default function DashboardPage() {
 
   // 사용자 세션별 챗봇 데이터 로드
   useEffect(() => {
-    if (session && isReady) {
+    if (session?.sessionId && isReady) {
       console.log('Dashboard: 익명 사용자 데이터 로드, 세션:', session.sessionId)
       loadChatbots()
     }

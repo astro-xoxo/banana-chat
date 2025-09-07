@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-import { generateClaudeResponse } from '@/lib/claude'
+import { generateClaudeResponse, ChatContext } from '@/lib/claude'
 
 // Supabase 클라이언트 생성
 const supabase = createClient(
@@ -52,8 +52,17 @@ export async function POST(request: NextRequest): Promise<NextResponse<ChatRespo
   const startTime = Date.now()
   
   try {
+    // 요청 헤더 및 메서드 로깅
+    console.log('📋 [DEBUG] 요청 정보:', {
+      method: request.method,
+      url: request.url,
+      headers: Object.fromEntries(request.headers.entries()),
+      userAgent: request.headers.get('user-agent')
+    })
+    
     // 1. 요청 데이터 파싱
     const body: ChatRequest = await request.json()
+    console.log('📋 [DEBUG] 파싱된 요청 데이터:', body)
     const { session_id, chatbot_id, chat_session_id, message, generate_image = false } = body
     
     console.log('💬 채팅 요청:', {
@@ -183,40 +192,38 @@ export async function POST(request: NextRequest): Promise<NextResponse<ChatRespo
     // 시스템 프롬프트 생성 (챗봇 정보 기반)
     const systemPrompt = createSystemPrompt(chatbot)
     
-    // 대화 컨텍스트 구성
-    const messages = []
-    
-    // 시스템 메시지 추가
-    messages.push({
-      role: 'system' as const,
-      content: systemPrompt
-    })
-    
-    // 대화 기록 추가 (사용자 메시지 제외 - 마지막에 추가할 예정)
+    // 채팅 기록을 ChatContext 형식으로 변환
+    const recentMessages: Array<{role: 'user' | 'assistant', content: string, timestamp: string}> = []
     if (chatHistory && chatHistory.length > 0) {
       const historyWithoutLast = chatHistory.slice(0, -1) // 방금 저장한 사용자 메시지 제외
       for (const msg of historyWithoutLast) {
-        messages.push({
+        recentMessages.push({
           role: msg.role as 'user' | 'assistant',
-          content: msg.content
+          content: msg.content,
+          timestamp: new Date().toISOString()
         })
       }
     }
     
-    // 현재 사용자 메시지 추가
-    messages.push({
-      role: 'user' as const,
-      content: message
-    })
+    // ChatContext 구성
+    const context = {
+      chatbotId: chatbot_id,
+      systemPrompt: systemPrompt,
+      recentMessages: recentMessages
+    }
 
     // Claude API 호출
-    const claudeResponse = await generateClaudeResponse(messages)
+    console.log('🔄 Claude API 호출 시작:', { message: message.substring(0, 50), context: { chatbotId: context.chatbotId } })
     
-    if (!claudeResponse.success || !claudeResponse.response) {
-      console.error('❌ Claude API 응답 실패:', claudeResponse.error)
+    const claudeResponse = await generateClaudeResponse(message, context)
+    
+    console.log('🔄 Claude API 응답 받음:', { responseType: typeof claudeResponse, length: claudeResponse?.length || 0 })
+    
+    if (!claudeResponse || typeof claudeResponse !== 'string') {
+      console.error('❌ Claude API 응답 실패:', { claudeResponse, type: typeof claudeResponse })
       return NextResponse.json({
         success: false,
-        error: `AI 응답 생성에 실패했습니다: ${claudeResponse.error}`
+        error: `AI 응답 생성에 실패했습니다`
       }, { status: 500 })
     }
 
@@ -227,8 +234,8 @@ export async function POST(request: NextRequest): Promise<NextResponse<ChatRespo
         chat_session_id: finalChatSessionId,
         session_id,
         role: 'assistant',
-        content: claudeResponse.response,
-        tokens_used: claudeResponse.tokensUsed || 0
+        content: claudeResponse,
+        tokens_used: 0
       })
       .select('id')
       .single()
@@ -296,25 +303,15 @@ export async function POST(request: NextRequest): Promise<NextResponse<ChatRespo
     console.log('🎉 채팅 완료:', {
       chat_session_id: finalChatSessionId,
       response_time: responseTime,
-      tokens_used: claudeResponse.tokensUsed,
+      response_length: claudeResponse.length,
       image_generated: !!generatedImageUrl
     })
 
+    // 최소한의 응답 객체만 생성
     return NextResponse.json({
       success: true,
       chat_session_id: finalChatSessionId,
-      user_message_id: userMessage.id,
-      assistant_message_id: assistantMessage.id,
-      assistant_response: claudeResponse.response,
-      generated_image_url: generatedImageUrl,
-      image_generation_time_ms: imageGenerationTime,
-      response_time_ms: responseTime,
-      tokens_used: claudeResponse.tokensUsed,
-      metadata: {
-        service: 'claude-banana',
-        chatbot_name: chatbot.name,
-        system_prompt_generated: true
-      }
+      assistant_response: claudeResponse
     })
 
   } catch (error) {

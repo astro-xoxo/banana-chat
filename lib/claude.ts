@@ -213,41 +213,11 @@ export class ClaudeClient {
           responseLength: responseText.length
         });
 
-        // 🏷️ 태그 강화 시스템 적용
-        console.log('🔍 태그 강화 시스템 시작 - 상세 로깅:', {
-          response_preview: responseText.substring(0, 100),
-          system_prompt_preview: systemPrompt.substring(0, 100)
-        });
+        // 🏷️ 태그 강화 시스템 임시 비활성화 - API 응답 차단 문제 해결
+        console.log('⚠️ 태그 강화 시스템 비활성화됨 - 순수 Claude 응답 반환');
         
-        try {
-          console.log('🔍 getMessageTagEnhancer 호출 시도...');
-          const tagEnhancer = getMessageTagEnhancer();
-          console.log('✅ tagEnhancer 인스턴스 생성 완료');
-          
-          console.log('🔍 addHiddenTags 호출 시도...');
-          const enhancedMessage = await tagEnhancer.addHiddenTags(responseText, {
-            recentMessages: [], // 컨텍스트 메시지는 별도 처리 필요
-            chatbotPersonality: systemPrompt.substring(0, 200) // 시스템 프롬프트에서 성격 추출
-          });
-
-          console.log('🏷️ 태그 강화 적용 완료:', {
-            original_length: responseText.length,
-            enhanced_length: enhancedMessage.length,
-            tags_added: enhancedMessage !== responseText,
-            has_html_comments: enhancedMessage.includes('<!--'),
-            enhanced_preview: enhancedMessage.substring(0, 200)
-          });
-
-          return enhancedMessage;
-
-        } catch (tagError) {
-          console.error('🚨 태그 강화 실패 - 상세 오류:', {
-            error_message: tagError instanceof Error ? tagError.message : tagError,
-            error_stack: tagError instanceof Error ? tagError.stack : undefined,
-            error_name: tagError instanceof Error ? tagError.name : undefined
-          });
-          return responseText; // 태그 강화 실패 시 원본 반환
-        }
+        // 태그 강화를 건너뛰고 원본 응답 반환
+        return responseText;
 
       } catch (error) {
         console.error(`Claude API 호출 시도 ${attempt} 실패:`, {
