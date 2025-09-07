@@ -1,104 +1,172 @@
-/**
- * 사용자 이미지 업로드 API
- * 사용자가 업로드한 이미지를 user-uploads 버킷에 저장
- */
-
 import { NextRequest, NextResponse } from 'next/server'
-import { createSupabaseServiceClient } from '@/lib/supabase-server'
-import { uploadUserImage } from '@/lib/storage/supabase-storage'
+import { createClient } from '@supabase/supabase-js'
 
-export async function POST(request: NextRequest) {
+// Supabase 클라이언트 생성
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+)
+
+interface UploadRequest {
+  session_id: string
+  file: File
+}
+
+interface UploadResponse {
+  success: boolean
+  imageUrl?: string
+  uploadedImageId?: string
+  error?: string
+}
+
+export async function POST(request: NextRequest): Promise<NextResponse<UploadResponse>> {
+  console.log('🖼️ 사용자 이미지 업로드 API 시작')
+  
   try {
-    // 세션 확인
-    const supabase = createSupabaseServiceClient()
-    const authHeader = request.headers.get('authorization')
-    
-    if (!authHeader) {
-      return NextResponse.json({ error: 'Authorization header required' }, { status: 401 })
-    }
-
-    // Bearer 토큰에서 사용자 정보 확인 (간단한 구현)
-    const token = authHeader.replace('Bearer ', '')
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token)
-    
-    if (authError || !user) {
-      return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
-    }
-
-    // FormData에서 이미지 파일 가져오기
+    // 1. FormData에서 파일과 세션 ID 추출
     const formData = await request.formData()
-    const file = formData.get('image') as File
+    const file = formData.get('file') as File
+    const session_id = formData.get('session_id') as string
     
-    if (!file) {
-      return NextResponse.json({ error: 'No image file provided' }, { status: 400 })
-    }
+    console.log('📤 업로드 요청:', {
+      session_id,
+      fileName: file?.name,
+      fileSize: file?.size,
+      fileType: file?.type
+    })
 
-    // 파일 형식 검증
-    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp']
-    if (!allowedTypes.includes(file.type)) {
-      return NextResponse.json({ 
-        error: 'Invalid file type. Only JPEG, PNG, WebP allowed' 
+    // 2. 입력값 검증
+    if (!session_id || !file) {
+      return NextResponse.json({
+        success: false,
+        error: '필수 입력값이 누락되었습니다 (session_id, file)'
       }, { status: 400 })
     }
 
-    // 파일 크기 검증 (10MB)
-    const maxSize = 10 * 1024 * 1024 // 10MB
+    // 3. 파일 타입 검증 (이미지만 허용)
+    if (!file.type.startsWith('image/')) {
+      return NextResponse.json({
+        success: false,
+        error: '이미지 파일만 업로드 가능합니다'
+      }, { status: 400 })
+    }
+
+    // 4. 파일 크기 제한 (5MB)
+    const maxSize = 5 * 1024 * 1024 // 5MB
     if (file.size > maxSize) {
-      return NextResponse.json({ 
-        error: 'File too large. Maximum size is 10MB' 
+      return NextResponse.json({
+        success: false,
+        error: '파일 크기는 5MB를 초과할 수 없습니다'
       }, { status: 400 })
     }
 
-    // 파일을 Buffer로 변환
-    const arrayBuffer = await file.arrayBuffer()
-    const imageBuffer = Buffer.from(arrayBuffer)
-    
-    // 파일 형식 결정
-    const fileFormat = file.type === 'image/jpeg' ? 'jpg' : 
-                      file.type === 'image/png' ? 'png' : 'webp'
+    // 5. 세션 유효성 확인
+    const { data: sessionData, error: sessionError } = await supabase
+      .from('anonymous_sessions')
+      .select('id, session_id')
+      .eq('session_id', session_id)
+      .single()
 
-    // user-uploads 버킷에 업로드
-    console.log(`사용자 이미지 업로드 요청: user_id=${user.id}, size=${imageBuffer.length}`)
-    
-    const uploadResult = await uploadUserImage(imageBuffer, user.id, fileFormat)
-    
-    if (!uploadResult.success) {
-      console.error('사용자 이미지 업로드 실패:', uploadResult.error)
-      return NextResponse.json({ 
-        error: 'Upload failed',
-        details: uploadResult.error 
+    if (sessionError || !sessionData) {
+      console.error('❌ 세션 조회 실패:', sessionError)
+      return NextResponse.json({
+        success: false,
+        error: '유효하지 않은 세션입니다'
+      }, { status: 401 })
+    }
+
+    // 6. 파일을 Buffer로 변환
+    const bytes = await file.arrayBuffer()
+    const buffer = Buffer.from(bytes)
+
+    // 7. 고유 파일명 생성 (timestamp + random)
+    const timestamp = Date.now()
+    const randomStr = Math.random().toString(36).substring(2, 8)
+    const fileExtension = file.name.split('.').pop()
+    const uniqueFileName = `user-upload-${timestamp}-${randomStr}.${fileExtension}`
+
+    console.log('📂 Supabase Storage 업로드 시작:', {
+      bucket: 'user-uploads',
+      fileName: uniqueFileName,
+      bufferSize: buffer.length
+    })
+
+    // 8. Supabase Storage에 파일 업로드
+    const { data: uploadData, error: uploadError } = await supabase.storage
+      .from('user-uploads')
+      .upload(uniqueFileName, buffer, {
+        contentType: file.type,
+        cacheControl: '3600',
+        upsert: false
+      })
+
+    if (uploadError) {
+      console.error('❌ Storage 업로드 실패:', uploadError)
+      return NextResponse.json({
+        success: false,
+        error: `파일 업로드에 실패했습니다: ${uploadError.message}`
       }, { status: 500 })
     }
 
-    console.log('사용자 이미지 업로드 성공:', uploadResult.url)
+    console.log('✅ Storage 업로드 완료:', uploadData)
 
-    // 성공 응답
+    // 9. 업로드된 파일의 공개 URL 생성
+    const { data: publicUrlData } = supabase.storage
+      .from('user-uploads')
+      .getPublicUrl(uniqueFileName)
+
+    const publicUrl = publicUrlData.publicUrl
+
+    console.log('🔗 공개 URL 생성:', publicUrl)
+
+    // 10. 데이터베이스에 업로드 정보 저장
+    const { data: uploadRecord, error: dbError } = await supabase
+      .from('uploaded_images')
+      .insert({
+        session_id,
+        file_name: uniqueFileName,
+        original_name: file.name,
+        file_size: file.size,
+        mime_type: file.type,
+        storage_path: uploadData.path,
+        public_url: publicUrl,
+        upload_purpose: 'profile_reference' // 프로필 생성 참고용
+      })
+      .select('id')
+      .single()
+
+    if (dbError || !uploadRecord) {
+      console.error('❌ DB 저장 실패:', dbError)
+      
+      // 스토리지 파일 삭제 (롤백)
+      await supabase.storage
+        .from('user-uploads')
+        .remove([uniqueFileName])
+      
+      return NextResponse.json({
+        success: false,
+        error: '데이터베이스 저장에 실패했습니다'
+      }, { status: 500 })
+    }
+
+    console.log('🎉 사용자 이미지 업로드 완료:', {
+      uploadedImageId: uploadRecord.id,
+      publicUrl,
+      fileName: uniqueFileName
+    })
+
     return NextResponse.json({
       success: true,
-      image_url: uploadResult.url,
-      filename: uploadResult.filename,
-      bucket: 'user-uploads',
-      size: uploadResult.size,
-      upload_time: new Date().toISOString()
+      imageUrl: publicUrl,
+      uploadedImageId: uploadRecord.id
     })
 
   } catch (error) {
-    console.error('사용자 이미지 업로드 API 오류:', error)
-    return NextResponse.json({ 
-      error: 'Internal server error',
-      details: error instanceof Error ? error.message : 'Unknown error'
+    console.error('❌ 이미지 업로드 API 오류:', error)
+    
+    return NextResponse.json({
+      success: false,
+      error: error instanceof Error ? error.message : '이미지 업로드 중 예상치 못한 오류가 발생했습니다'
     }, { status: 500 })
   }
-}
-
-// OPTIONS 메서드 지원 (CORS)
-export async function OPTIONS() {
-  return new NextResponse(null, {
-    status: 200,
-    headers: {
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'POST, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-    },
-  })
 }

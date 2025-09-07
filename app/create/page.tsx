@@ -1,246 +1,225 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { createSupabaseClient } from '@/lib/supabase-client'
-import { authenticatedFetch } from '@/lib/auth-fetch'
-import { Card, CardContent } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Progress } from '@/components/ui/progress'
-import { AlertCircle, CheckCircle, Clock, Loader2, Home, MessageSquare, RotateCcw, ArrowLeft } from 'lucide-react'
-import CharacterCreationWizard from '@/components/character/CharacterCreationWizard'
-import ProfileThumbnail from '@/components/ui/ProfileThumbnail'
+import { useAnonymousSession } from '@/components/auth/AnonymousProvider'
+import { ArrowLeft, Upload, Loader2, CheckCircle } from 'lucide-react'
 
-type CreateStep = 'character' | 'processing' | 'complete' | 'error'
-
-interface ProcessingState {
-  stage: 'uploading' | 'generating' | 'saving' | 'complete'
-  message: string
-  progress: number
+interface ChatbotFormData {
+  name: string
+  age: number
+  gender: 'male' | 'female'
+  relationship: string
+  concept: string
+  userImage?: File
 }
 
+type CreateStep = 'form' | 'generating' | 'complete' | 'error'
+
 export default function CreatePage() {
+  const { session } = useAnonymousSession()
   const router = useRouter()
-  const [currentStep, setCurrentStep] = useState<CreateStep>('character')
-  const [wizardStep, setWizardStep] = useState<number>(0) // 7단계 위자드의 현재 단계
-
-  const [uploadedImageUrl, setUploadedImageUrl] = useState<string | null>(null)
-  const [chatbotName, setChatbotName] = useState<string>('')
-  const [processingState, setProcessingState] = useState<ProcessingState>({
-    stage: 'uploading',
-    message: '처리 중...',
-    progress: 0
-  })
-  const [generatedChatbotId, setGeneratedChatbotId] = useState<string | null>(null)
-  const [profileImageUrl, setProfileImageUrl] = useState<string | null>(null)
-  const [errorMessage, setErrorMessage] = useState<string>('')
-  const [user, setUser] = useState<any>(null)
-
-  // 사용자 인증 확인
-  useEffect(() => {
-    const checkUser = async () => {
-      const supabase = createSupabaseClient()
-      const { data: { session } } = await supabase.auth.getSession()
-      
-      if (!session) {
-        router.push('/login')
-        return
-      }
-      
-      setUser(session.user)
-      
-      // 프로필 이미지 쿼터 확인
-      const { data: userData } = await supabase
-        .from('users')
-        .select('profile_image_used')
-        .eq('id', session.user.id)
-        .single()
-      
-      if (userData?.profile_image_used) {
-        setCurrentStep('error')
-        setErrorMessage('프로필 이미지 생성 쿼터를 이미 사용하셨습니다. (1회 제한)')
-      }
-    }
-    
-    checkUser()
-  }, [router])
   
-  const handleCharacterCreationComplete = async (
-    age: number,
-    gender: 'male' | 'female',
-    relationship: string,
-    concept: string,
-    name: string,
-    imageUrl: string
-  ) => {
-    console.log('캐릭터 생성 완료:', { age, gender, relationship, concept, name })
-    
-    setChatbotName(name)
-    setUploadedImageUrl(imageUrl)
-    
-    // AI 이미지 생성 시작
-    await startAIGeneration({
-      age,
-      gender,
-      relationship,
-      concept,
-      name,
-      imageUrl
-    })
+  const [currentStep, setCurrentStep] = useState<CreateStep>('form')
+  const [formData, setFormData] = useState<ChatbotFormData>({
+    name: '',
+    age: 25,
+    gender: 'female',
+    relationship: '',
+    concept: ''
+  })
+  const [selectedImage, setSelectedImage] = useState<File | null>(null)
+  const [imagePreview, setImagePreview] = useState<string | null>(null)
+  const [isGenerating, setIsGenerating] = useState(false)
+  const [error, setError] = useState<string>('')
+  const [generatedChatbotId, setGeneratedChatbotId] = useState<string>('')
+  const [profileImageUrl, setProfileImageUrl] = useState<string>('')
+
+  // 세션이 없으면 홈으로 리디렉션
+  if (!session) {
+    router.push('/')
+    return null
   }
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) {
+      setSelectedImage(file)
+      
+      // 이미지 미리보기 생성
+      const reader = new FileReader()
+      reader.onload = (e) => {
+        setImagePreview(e.target?.result as string)
+      }
+      reader.readAsDataURL(file)
+    }
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
     
-  const startAIGeneration = async (characterData: {
-    age: number
-    gender: 'male' | 'female'
-    relationship: string
-    concept: string
-    name: string
-    imageUrl: string
-  }) => {
-    if (!user) return
-    
-    setCurrentStep('processing')
-    
+    if (!formData.name || !formData.relationship || !formData.concept) {
+      setError('모든 필수 항목을 입력해주세요')
+      return
+    }
+
+    setCurrentStep('generating')
+    setIsGenerating(true)
+    setError('')
+
     try {
-      // 1단계: AI 이미지 생성
-      setProcessingState({
-        stage: 'generating',
-        message: 'AI가 당신의 캐릭터를 생성하고 있습니다... (최대 2분)',
-        progress: 30
-      })
-
-      // Supabase 클라이언트를 사용한 인증 확인
-      const supabase = createSupabaseClient()
-      const { data: { session } } = await supabase.auth.getSession()
+      let userImageUrl = ''
       
-      if (!session) {
-        throw new Error('인증 세션이 만료되었습니다. 다시 로그인해주세요.')
-      }
-
-      // 타임아웃 설정 (4분)
-      const controller = new AbortController()
-      const timeoutId = setTimeout(() => {
-        console.error('AI 이미지 생성 요청 타임아웃 (4분 초과)')
-        controller.abort()
-      }, 240000)
-      
-      console.log('🚀 새로운 캐릭터 생성 API 요청 시작:', {
-        endpoint: '/api/generate/profile',
-        characterData,
-        timeout: '240초 (4분)'
-      })
-
-      // 프로필 이미지 생성 API 호출
-      const response = await authenticatedFetch('/api/generate/profile', {
-        method: 'POST',
-        body: JSON.stringify({
-          chatbot_name: characterData.name,
-          age: characterData.age,
-          gender: characterData.gender,
-          relationship: characterData.relationship,
-          concept: characterData.concept,
-          user_uploads_url: characterData.imageUrl,
-          relationship_type: characterData.relationship
-        }),
-        signal: controller.signal
-      })
-      clearTimeout(timeoutId)
-
-      // 응답 상태 먼저 확인
-      if (!response.ok) {
-        console.error('🚨 HTTP 오류 응답:', {
-          status: response.status,
-          statusText: response.statusText,
-          headers: Object.fromEntries(response.headers.entries())
+      // 이미지 업로드 (선택사항)
+      if (selectedImage) {
+        const uploadFormData = new FormData()
+        uploadFormData.append('file', selectedImage)
+        uploadFormData.append('session_id', session.sessionId)
+        
+        const uploadResponse = await fetch('/api/upload/user-image', {
+          method: 'POST',
+          body: uploadFormData
         })
-        throw new Error(`HTTP 오류: ${response.status} ${response.statusText}`)
-      }
-
-      // 응답 데이터 파싱
-      const result = await response.json()
-      
-      console.log('🎯 캐릭터 생성 API 응답:', {
-        status: response.status,
-        statusText: response.statusText,
-        result: result
-      })
-
-      // 서버 응답에서 success 필드 확인
-      if (!result.success) {
-        throw new Error(result.error || '캐릭터 생성에 실패했습니다.')
-      }
-
-      // 2단계: 완료
-      setProcessingState({
-        stage: 'complete',
-        message: 'AI 캐릭터 생성이 완료되었습니다!',
-        progress: 100
-      })
-
-      setGeneratedChatbotId(result.chatbot_id)
-      setProfileImageUrl(result.profile_image_url)
-      
-      console.log('🔍 상태 업데이트 완료:', {
-        generatedChatbotId: result.chatbot_id,
-        profileImageUrl: result.profile_image_url
-      })
-      
-      // 잠시 대기 후 완료 단계로 이동
-      setTimeout(() => {
-        setCurrentStep('complete')
-      }, 1000)
-
-    } catch (error) {
-      console.error('🚨 AI 생성 과정 중 오류:', error)
-      
-      setCurrentStep('error')
-      
-      let userFriendlyMessage = '알 수 없는 오류가 발생했습니다.'
-      
-      if (error instanceof Error) {
-        if (error.name === 'AbortError' || error.message.includes('aborted')) {
-          userFriendlyMessage = 'AI 캐릭터 생성 시간이 초과되었습니다. (4분 초과) 잠시 후 다시 시도해주세요.'
-        } else if (error.message.includes('network') || error.message.includes('fetch')) {
-          userFriendlyMessage = '서버에 연결할 수 없습니다. 네트워크 연결을 확인하시거나 잠시 후 다시 시도해주세요.'
-        } else if (error.message.includes('인증')) {
-          userFriendlyMessage = '인증에 문제가 발생했습니다. 다시 로그인해주세요.'
-        } else {
-          userFriendlyMessage = error.message
+        
+        if (uploadResponse.ok) {
+          const uploadResult = await uploadResponse.json()
+          if (uploadResult.success) {
+            userImageUrl = uploadResult.imageUrl
+          }
         }
       }
-      
-      setErrorMessage(userFriendlyMessage)
+
+      // 챗봇 생성 (NanoBanana API 사용)
+      const createResponse = await fetch('/api/generate/profile-nanobanana', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          session_id: session.sessionId,
+          chatbot_name: formData.name,
+          age: formData.age,
+          gender: formData.gender,
+          relationship: formData.relationship,
+          concept: formData.concept,
+          user_uploaded_image_url: userImageUrl
+        })
+      })
+
+      const result = await createResponse.json()
+
+      if (result.success) {
+        setGeneratedChatbotId(result.chatbot_id)
+        setProfileImageUrl(result.profile_image_url || '')
+        setCurrentStep('complete')
+      } else {
+        throw new Error(result.error || '챗봇 생성에 실패했습니다')
+      }
+    } catch (err) {
+      console.error('챗봇 생성 오류:', err)
+      setError(err instanceof Error ? err.message : '챗봇 생성 중 오류가 발생했습니다')
+      setCurrentStep('error')
+    } finally {
+      setIsGenerating(false)
     }
   }
 
-  const getStepProgress = () => {
-    switch (currentStep) {
-      case 'character': return Math.round(((wizardStep + 1) / 7) * 100) // 실제 7단계 진행률
-      case 'processing': return 100 // 7단계 완료 후 처리 중
-      case 'complete': return 100
-      case 'error': return wizardStep > 0 ? Math.round(((wizardStep + 1) / 7) * 100) : 0
-      default: return 0
-    }
+  const handleRetry = () => {
+    setCurrentStep('form')
+    setError('')
   }
 
-  const getStepTitle = () => {
-    switch (currentStep) {
-      case 'character': return '1-7단계: 캐릭터 생성'
-      case 'processing': return '처리 중: AI 생성'
-      case 'complete': return '완료!'
-      case 'error': return '오류 발생'
-      default: return 'AI 캐릭터 생성'
-    }
-  }
-
-  if (!user) {
+  if (currentStep === 'generating') {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="text-center">
-          <div className="w-12 h-12 bg-foreground rounded-2xl flex items-center justify-center mx-auto mb-4">
-            <div className="w-6 h-6 border-4 border-white border-t-transparent rounded-full animate-spin"></div>
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="bg-surface rounded-3xl p-8 max-w-md w-full mx-4 text-center">
+          <div className="w-16 h-16 bg-warning rounded-2xl flex items-center justify-center mx-auto mb-6">
+            <Loader2 className="w-8 h-8 text-inverse animate-spin" />
           </div>
-          <p className="text-foreground text-sm font-medium">로딩 중...</p>
+          <h2 className="text-xl font-bold text-foreground mb-2">
+            AI 캐릭터 생성 중...
+          </h2>
+          <p className="text-muted mb-4">
+            NanoBanana AI가 당신만의 특별한 캐릭터를 만들고 있습니다
+          </p>
+          <div className="w-full bg-background rounded-full h-2">
+            <div className="bg-warning h-2 rounded-full animate-pulse" style={{ width: '70%' }}></div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (currentStep === 'complete') {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="bg-surface rounded-3xl p-8 max-w-md w-full mx-4 text-center">
+          <div className="w-16 h-16 bg-success rounded-2xl flex items-center justify-center mx-auto mb-6">
+            <CheckCircle className="w-8 h-8 text-white" />
+          </div>
+          <h2 className="text-xl font-bold text-foreground mb-2">
+            생성 완료! 🎉
+          </h2>
+          <p className="text-muted mb-6">
+            {formData.name} 캐릭터가 성공적으로 만들어졌습니다
+          </p>
+          
+          {profileImageUrl && (
+            <div className="mb-6">
+              <img 
+                src={profileImageUrl} 
+                alt="Generated Profile" 
+                className="w-24 h-24 rounded-2xl mx-auto object-cover"
+              />
+            </div>
+          )}
+          
+          <div className="space-y-3">
+            <button
+              onClick={() => router.push(`/chat/${generatedChatbotId}`)}
+              className="w-full bg-warning hover:bg-warning/90 text-inverse font-medium py-3 px-4 rounded-xl transition-colors"
+            >
+              지금 채팅하기
+            </button>
+            <button
+              onClick={() => router.push('/dashboard')}
+              className="w-full bg-surface-hover hover:bg-interactive-hover text-foreground font-medium py-3 px-4 rounded-xl transition-colors"
+            >
+              대시보드로 가기
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (currentStep === 'error') {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="bg-surface rounded-3xl p-8 max-w-md w-full mx-4 text-center">
+          <div className="w-16 h-16 bg-destructive rounded-2xl flex items-center justify-center mx-auto mb-6">
+            <span className="text-2xl">❌</span>
+          </div>
+          <h2 className="text-xl font-bold text-foreground mb-2">
+            생성 실패
+          </h2>
+          <p className="text-muted mb-6">
+            {error}
+          </p>
+          <div className="space-y-3">
+            <button
+              onClick={handleRetry}
+              className="w-full bg-warning hover:bg-warning/90 text-inverse font-medium py-3 px-4 rounded-xl transition-colors"
+            >
+              다시 시도
+            </button>
+            <button
+              onClick={() => router.push('/dashboard')}
+              className="w-full bg-surface-hover hover:bg-interactive-hover text-foreground font-medium py-3 px-4 rounded-xl transition-colors"
+            >
+              대시보드로 돌아가기
+            </button>
+          </div>
         </div>
       </div>
     )
@@ -248,179 +227,185 @@ export default function CreatePage() {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* 헤더 - 대시보드/채팅 페이지와 동일한 스타일 */}
+      {/* 헤더 */}
       <header className="bg-surface/90 backdrop-blur-md border-b border-border sticky top-0 z-50">
         <div className="container mx-auto px-4 py-3">
-          <div className="relative flex items-center justify-center" style={{ minHeight: '36px' }}>
-            <h1 className="text-lg md:text-xl font-bold text-foreground">
-              AI 캐릭터 만들기
-            </h1>
-            <Button
-              onClick={() => router.push('/dashboard')}
-              variant="outline"
-              className="absolute right-0 min-h-button-sm px-2 sm:px-3 py-2 text-xs font-medium flex items-center gap-1 border-border hover:bg-surface"
-              title="대시보드로 이동"
-            >
-              <Home className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-              <span className="hidden sm:inline">대시보드</span>
-            </Button>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <button
+                onClick={() => router.push('/dashboard')}
+                className="flex items-center justify-center w-8 h-8 bg-surface-hover rounded-xl hover:bg-interactive-hover transition-colors"
+              >
+                <ArrowLeft className="w-4 h-4 text-foreground" />
+              </button>
+              <h1 className="text-lg font-bold text-foreground">새 AI 캐릭터 만들기</h1>
+            </div>
           </div>
         </div>
       </header>
 
-      <div className="container mx-auto px-4 max-w-4xl py-6">
-
-
-        {/* 단계별 컨텐츠 */}
-        <div className="min-h-[400px]">
-          {currentStep === 'character' && (
-            <CharacterCreationWizard
-              onComplete={handleCharacterCreationComplete}
-              onBack={() => router.push('/dashboard')}
-              onStepChange={setWizardStep}
-            />
-          )}
-
-          {currentStep === 'processing' && (
-            <Card className="text-center py-12">
-              <CardContent className="p-6">
-                <div className="space-y-6">
-                  <div className="relative mx-auto">
-                    <div className="w-16 h-16 mx-auto bg-surface rounded-full flex items-center justify-center border border-border">
-                      <Loader2 className="w-8 h-8 text-primary animate-spin" />
-                    </div>
-                    
-                    {/* 프로필 이미지 생성 전용 프로그레스 바 */}
-                    <div className="w-40 mx-auto mt-4">
-                      <div className="h-2 bg-surface rounded-full overflow-hidden">
-                        <div 
-                          className="h-full bg-primary rounded-full transition-all duration-300 animate-pulse"
-                          style={{ width: `${Math.min(processingState.progress, 100)}%` }}
-                        ></div>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <div>
-                    <h3 className="text-xl font-semibold text-foreground mb-2">
-                      AI 마법이 일어나고 있어요! ✨
-                    </h3>
-                    <p className="text-sm text-muted mb-4">
-                      {processingState.message}
-                    </p>
-                    <div className="text-sm text-muted">
-                      잠시만 기다려주세요. 곧 놀라운 결과를 보여드릴게요!
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {currentStep === 'complete' && (
-            <Card className="text-center py-12">
-              <CardContent className="p-6">
-                <div className="space-y-6">
-                  {profileImageUrl ? (
-                    <div className="mx-auto">
-                      <ProfileThumbnail 
-                        imageUrl={profileImageUrl}
-                        alt={`생성된 ${chatbotName} 캐릭터 프로필`}
-                        size="lg"
-                        className="mx-auto"
-                      />
-                    </div>
-                  ) : (
-                    <div className="w-16 h-16 mx-auto bg-success/10 rounded-full flex items-center justify-center">
-                      <CheckCircle className="w-8 h-8 text-success" />
-                    </div>
-                  )}
-                  
-                  <div>
-                    <h3 className="text-xl font-bold text-success mb-2">
-                      AI 캐릭터 생성 완료! 🎉
-                    </h3>
-                    <p className="text-base text-muted mb-6 leading-normal">
-                      <strong>{chatbotName}</strong> 캐릭터가 성공적으로 생성되었습니다.<br />
-                      이제 채팅을 시작할 수 있어요!
-                    </p>
-                  </div>
-                  
-                  <div className="flex flex-row gap-4 justify-center">
-                    <Button
-                      variant="outline"
-                      onClick={() => router.push('/dashboard')}
-                      className="flex items-center justify-center gap-2 min-h-button-sm px-3 sm:px-4 py-2 text-sm font-medium"
-                      title="대시보드로 이동"
+      {/* 메인 컨텐츠 */}
+      <main className="container mx-auto px-4 py-8">
+        <div className="max-w-2xl mx-auto">
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {/* 참고 이미지 업로드 (선택사항) */}
+            <div className="bg-surface rounded-3xl p-6">
+              <h3 className="text-lg font-semibold text-foreground mb-4">참고 이미지 (선택사항)</h3>
+              <div className="border-2 border-dashed border-border rounded-2xl p-6 text-center">
+                {imagePreview ? (
+                  <div className="space-y-4">
+                    <img 
+                      src={imagePreview} 
+                      alt="Preview" 
+                      className="w-32 h-32 rounded-2xl mx-auto object-cover"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedImage(null)
+                        setImagePreview(null)
+                      }}
+                      className="text-sm text-muted hover:text-foreground"
                     >
-                      <Home className="w-4 h-4" />
-                      <span className="hidden sm:inline">대시보드로</span>
-                    </Button>
-                    
-                    <Button
-                      onClick={() => router.push(`/chat/${generatedChatbotId}`)}
-                      className="bg-primary text-inverse hover:bg-primary/90 flex items-center justify-center gap-2 min-h-button-sm px-3 sm:px-4 py-2 text-sm font-medium shadow-sm hover:shadow-hover transition-all duration-200"
-                      title="채팅 시작하기"
-                    >
-                      <MessageSquare className="w-4 h-4" />
-                      <span className="hidden sm:inline">지금 채팅하기</span>
-                    </Button>
+                      이미지 제거
+                    </button>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
-          )}
+                ) : (
+                  <div className="space-y-4">
+                    <Upload className="w-12 h-12 text-muted mx-auto" />
+                    <div>
+                      <p className="text-foreground font-medium mb-1">참고할 이미지를 업로드하세요</p>
+                      <p className="text-sm text-muted">원하는 스타일의 이미지를 올리면 더 정확한 캐릭터를 만들 수 있어요</p>
+                    </div>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleImageChange}
+                      className="hidden"
+                      id="image-upload"
+                    />
+                    <label
+                      htmlFor="image-upload"
+                      className="inline-flex items-center px-4 py-2 bg-surface-hover hover:bg-interactive-hover text-foreground rounded-xl cursor-pointer transition-colors"
+                    >
+                      이미지 선택
+                    </label>
+                  </div>
+                )}
+              </div>
+            </div>
 
-          {currentStep === 'error' && (
-            <Card className="text-center py-12">
-              <CardContent className="p-6">
-                <div className="space-y-6">
-                  <div className="w-16 h-16 mx-auto bg-error/10 rounded-full flex items-center justify-center">
-                    <AlertCircle className="w-8 h-8 text-error" />
-                  </div>
-                  
-                  <div>
-                    <h3 className="text-xl font-semibold text-error mb-2">
-                      문제가 발생했습니다
-                    </h3>
-                    <p className="text-base text-muted mb-6 leading-normal">
-                      {errorMessage}
-                    </p>
-                  </div>
-                  
-                  <div className="flex flex-row gap-4 justify-center">
-                    <Button
-                      variant="outline"
-                      onClick={() => router.push('/dashboard')}
-                      className="flex items-center justify-center gap-2 min-h-button-sm px-3 sm:px-4 py-2 text-sm font-medium"
-                      title="대시보드로 돌아가기"
-                    >
-                      <ArrowLeft className="w-4 h-4" />
-                      <span className="hidden sm:inline">대시보드로 돌아가기</span>
-                    </Button>
-                    
-                    {!errorMessage.includes('쿼터') && (
-                      <Button
-                        onClick={() => {
-                          setCurrentStep('character')
-                          setErrorMessage('')
-                          setUploadedImageUrl(null)
-                          setProfileImageUrl(null)
-                        }}
-                        className="bg-primary text-inverse hover:bg-primary/90 flex items-center justify-center gap-2 min-h-button-sm px-3 sm:px-4 py-2 text-sm font-medium shadow-sm hover:shadow-hover transition-all duration-200"
-                        title="다시 시도하기"
-                      >
-                        <RotateCcw className="w-4 h-4" />
-                        <span className="hidden sm:inline">다시 시도</span>
-                      </Button>
-                    )}
-                  </div>
+            {/* 기본 정보 */}
+            <div className="bg-surface rounded-3xl p-6 space-y-4">
+              <h3 className="text-lg font-semibold text-foreground mb-4">기본 정보</h3>
+              
+              {/* 이름 */}
+              <div>
+                <label className="block text-foreground font-medium mb-2">캐릭터 이름 *</label>
+                <input
+                  type="text"
+                  value={formData.name}
+                  onChange={(e) => setFormData({...formData, name: e.target.value})}
+                  className="w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground placeholder:text-muted focus:border-warning focus:outline-none"
+                  placeholder="예: 지수, 민준, 사라 등"
+                  required
+                />
+              </div>
+
+              {/* 나이 */}
+              <div>
+                <label className="block text-foreground font-medium mb-2">나이 *</label>
+                <input
+                  type="number"
+                  value={formData.age}
+                  onChange={(e) => setFormData({...formData, age: parseInt(e.target.value) || 25})}
+                  className="w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground focus:border-warning focus:outline-none"
+                  min="18"
+                  max="100"
+                  required
+                />
+              </div>
+
+              {/* 성별 */}
+              <div>
+                <label className="block text-foreground font-medium mb-2">성별 *</label>
+                <div className="flex space-x-3">
+                  <button
+                    type="button"
+                    onClick={() => setFormData({...formData, gender: 'female'})}
+                    className={`flex-1 py-3 px-4 rounded-xl font-medium transition-colors ${
+                      formData.gender === 'female' 
+                        ? 'bg-warning text-inverse' 
+                        : 'bg-background border border-border text-foreground hover:bg-surface-hover'
+                    }`}
+                  >
+                    여성
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setFormData({...formData, gender: 'male'})}
+                    className={`flex-1 py-3 px-4 rounded-xl font-medium transition-colors ${
+                      formData.gender === 'male' 
+                        ? 'bg-warning text-inverse' 
+                        : 'bg-background border border-border text-foreground hover:bg-surface-hover'
+                    }`}
+                  >
+                    남성
+                  </button>
                 </div>
-              </CardContent>
-            </Card>
-          )}
+              </div>
+
+              {/* 관계 */}
+              <div>
+                <label className="block text-foreground font-medium mb-2">나와의 관계 *</label>
+                <textarea
+                  value={formData.relationship}
+                  onChange={(e) => setFormData({...formData, relationship: e.target.value})}
+                  className="w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground placeholder:text-muted focus:border-warning focus:outline-none resize-none"
+                  placeholder="예: 친한 친구, 연인, 동료, 선배, 후배 등... 자세히 설명해주세요"
+                  rows={3}
+                  required
+                />
+              </div>
+
+              {/* 컨셉/특성 */}
+              <div>
+                <label className="block text-foreground font-medium mb-2">캐릭터 컨셉/특성 *</label>
+                <textarea
+                  value={formData.concept}
+                  onChange={(e) => setFormData({...formData, concept: e.target.value})}
+                  className="w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground placeholder:text-muted focus:border-warning focus:outline-none resize-none"
+                  placeholder="예: 밝고 활발한 성격, 요리를 좋아하는 카페 사장, 책을 좋아하는 조용한 성격, 유머러스하고 장난기 많은 성격 등... 어떤 캐릭터인지 자세히 설명해주세요"
+                  rows={4}
+                  required
+                />
+              </div>
+            </div>
+
+            {error && (
+              <div className="bg-destructive/10 border border-destructive/20 rounded-xl p-4">
+                <p className="text-destructive text-sm">{error}</p>
+              </div>
+            )}
+
+            {/* 생성 버튼 */}
+            <button
+              type="submit"
+              disabled={isGenerating}
+              className="w-full bg-warning hover:bg-warning/90 disabled:opacity-50 disabled:cursor-not-allowed text-inverse font-medium py-4 px-6 rounded-2xl transition-colors"
+            >
+              {isGenerating ? (
+                <span className="flex items-center justify-center">
+                  <Loader2 className="w-5 h-5 animate-spin mr-2" />
+                  AI 캐릭터 생성 중...
+                </span>
+              ) : (
+                'AI 캐릭터 생성하기'
+              )}
+            </button>
+          </form>
         </div>
-      </div>
+      </main>
     </div>
   )
 }

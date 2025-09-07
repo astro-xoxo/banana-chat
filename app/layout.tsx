@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
 import './globals.css'
-import { AuthProvider } from '@/components/auth/AuthProvider'
+import { AnonymousProvider } from '@/components/auth/AnonymousProvider'
 import { Toaster } from 'sonner'
 
 // 터미널 로그 자동 저장 시스템 초기화
@@ -17,8 +17,8 @@ if (typeof window === 'undefined') {
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: 'AI Face Chat Lite',
-  description: 'AI 얼굴 합성 챗봇 서비스 - 맞춤형 AI 캐릭터와 채팅하세요',
+  title: 'Banana Chat',
+  description: 'AI 캐릭터와 자유롭게 채팅하고 이미지를 생성하는 서비스',
 }
 
 export default function RootLayout({
@@ -39,11 +39,11 @@ export default function RootLayout({
       </head>
       <body className={`${inter.className} h-full overscroll-none`}>
         <div id="app-root" className="h-full relative">
-          <AuthProvider>
+          <AnonymousProvider>
             <main className="h-full">
               {children}
             </main>
-          </AuthProvider>
+          </AnonymousProvider>
           <Toaster 
             position="top-center"
             toastOptions={{
