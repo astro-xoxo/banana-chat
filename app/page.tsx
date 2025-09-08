@@ -114,29 +114,6 @@ export default function HomePage() {
       {/* 푸터 */}
       <footer className="bg-surface py-8">
         <div className="container mx-auto px-4 text-center">
-          <div className="bg-surface border border-border rounded-3xl mb-6 p-6">
-            <div className="flex items-center mb-4">
-              <div className="w-10 h-10 bg-warning rounded-2xl flex items-center justify-center mr-3">
-                <span className="text-lg">ℹ️</span>
-              </div>
-              <h4 className="text-base font-bold text-foreground">서비스 특징</h4>
-            </div>
-            <ul className="text-foreground space-y-2 leading-normal text-left text-sm">
-              <li className="flex items-start">
-                <span className="text-warning mr-2 mt-1 text-xs">•</span>
-                <span>로그인 없이 익명으로 이용 가능</span>
-              </li>
-              <li className="flex items-start">
-                <span className="text-warning mr-2 mt-1 text-xs">•</span>
-                <span>브라우저 세션 동안 데이터 유지</span>
-              </li>
-              <li className="flex items-start">
-                <span className="text-warning mr-2 mt-1 text-xs">•</span>
-                <span>무제한 채팅 및 이미지 생성</span>
-              </li>
-            </ul>
-          </div>
-          
           <div className="text-muted text-sm">
             <p>&copy; 2025 Banana Chat. All rights reserved.</p>
             <p className="mt-2 text-xs">개인정보처리방침 | 이용약관</p>
