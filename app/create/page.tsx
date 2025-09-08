@@ -275,7 +275,7 @@ export default function CreatePage() {
             <div className="bg-surface rounded-3xl p-6">
               <h3 className="text-lg font-semibold text-foreground mb-4">Reference Image (Optional)</h3>
               <p className="text-sm text-muted mb-4">
-                Upload a face image for AI reference. You'll crop the face area after upload.
+                Upload a face image for AI reference. You&apos;ll crop the face area after upload.
               </p>
               <ImageUploadWithCrop
                 onImageSelect={handleImageSelect}
