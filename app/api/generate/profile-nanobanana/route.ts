@@ -207,7 +207,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<ProfileGe
     
     return NextResponse.json({
       success: false,
-      error: error instanceof Error ? error.message : '프로필 생성 중 예상치 못한 오류가 발생했습니다'
+      error: error instanceof Error ? error.message : 'An unexpected error occurred while creating the profile'
     }, { status: 500 })
   }
 }
@@ -220,19 +220,19 @@ function generatePersonalityFromUserInput(
   relationship: string,
   concept: string
 ): string {
-  // 사용자가 입력한 정보를 그대로 활용하여 자연스러운 말투 프롬프트 생성
-  let personalityPrompt = `나는 ${name}이야. ${age}살이고 ${gender === 'female' ? '여성' : '남성'}이야. `
+  // Generate natural personality prompt using user input information
+  let personalityPrompt = `I am ${name}. I'm ${age} years old and I'm ${gender === 'female' ? 'female' : 'male'}. `
   
-  // 관계 정보를 자연스럽게 포함
-  personalityPrompt += `너와는 ${relationship} 사이야. `
+  // Include relationship information naturally
+  personalityPrompt += `My relationship with you is: ${relationship}. `
   
-  // 컨셉 정보를 말투에 반영
+  // Reflect concept information in speaking style
   personalityPrompt += `${concept} `
   
-  // 자연스러운 대화 유도 멘트 추가
-  personalityPrompt += `이런 나의 성격과 상황을 바탕으로 자연스럽고 일관성 있는 말투로 대화할게. 내 나이와 성별, 우리 관계에 맞는 언어를 사용하고, 내가 가진 특성을 대화에 자연스럽게 녹여낼 거야.`
+  // Add natural conversation guidance
+  personalityPrompt += `Based on my personality and situation, I will communicate with a natural and consistent speaking style. I will use language appropriate for my age, gender, and our relationship, and naturally incorporate my characteristics into our conversations.`
   
-  console.log('🎭 생성된 말투 프롬프트:', personalityPrompt)
+  console.log('🎭 Generated personality prompt:', personalityPrompt)
   
   return personalityPrompt
 }

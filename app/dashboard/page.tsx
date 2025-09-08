@@ -65,7 +65,7 @@ export default function DashboardPage() {
           <div className="w-12 h-12 bg-foreground rounded-2xl flex items-center justify-center mx-auto mb-4">
             <div className="w-6 h-6 border-4 border-white border-t-transparent rounded-full animate-spin"></div>
           </div>
-          <p className="text-foreground text-sm font-medium">초기화 중...</p>
+          <p className="text-foreground text-sm font-medium">Initializing...</p>
         </div>
       </div>
     )
@@ -86,13 +86,13 @@ export default function DashboardPage() {
             
             <div className="flex items-center space-x-3">
               <div className="text-xs text-muted bg-surface-hover px-3 py-2 rounded-xl">
-                세션: {session?.sessionId.slice(0, 8)}...
+                Session: {session?.sessionId.slice(0, 8)}...
               </div>
               <button
                 onClick={() => router.push('/')}
                 className="text-sm text-muted hover:text-foreground transition-colors py-2 px-3 rounded-xl hover:bg-surface"
               >
-                홈으로
+                Home
               </button>
             </div>
           </div>
@@ -105,10 +105,10 @@ export default function DashboardPage() {
           {/* 웰컴 메시지 */}
           <div className="text-center mb-8">
             <h2 className="text-2xl font-bold text-foreground mb-2">
-              당신의 이상형과 다양한 상황에서 <span style={{ color: 'rgb(255, 184, 5)' }}>채팅을 해보세요.</span>
+              Chat with your ideal character in various situations <span style={{ color: 'rgb(255, 184, 5)' }}>anytime.</span>
             </h2>
             <p className="text-muted text-sm">
-              Nano Banana 로 당신이 꿈꾸던 이상형을 만들고 다양한 상황에서 생동감 있는 비쥬얼 채팅을 진행 할 수 있습니다.
+              Create your dream character with NanoBanana and enjoy vivid visual chats in various situations.
             </p>
           </div>
 
@@ -119,31 +119,31 @@ export default function DashboardPage() {
               className="w-full bg-warning hover:bg-warning/90 text-inverse font-medium py-4 px-6 rounded-2xl shadow-sm hover:shadow-hover transition-all duration-200 flex items-center justify-center space-x-2"
             >
               <span className="text-xl">+</span>
-              <span>새로운 AI 캐릭터 만들기</span>
+              <span>Create New AI Character</span>
             </button>
           </div>
 
           {/* 챗봇 목록 */}
           <div className="space-y-6">
-            <h3 className="text-lg font-semibold text-foreground">내 AI 캐릭터들</h3>
+            <h3 className="text-lg font-semibold text-foreground">My AI Characters</h3>
             
             {isLoadingData ? (
               <div className="text-center py-8">
                 <div className="w-8 h-8 border-4 border-muted border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
-                <p className="text-sm text-muted">로딩 중...</p>
+                <p className="text-sm text-muted">Loading...</p>
               </div>
             ) : chatbots.length === 0 ? (
               <div className="text-center py-12 bg-surface rounded-3xl">
                 <div className="w-16 h-16 bg-interactive-hover rounded-2xl flex items-center justify-center mx-auto mb-4">
                   <span className="text-2xl">🤖</span>
                 </div>
-                <h4 className="text-lg font-semibold text-foreground mb-2">아직 AI 캐릭터가 없어요</h4>
-                <p className="text-muted mb-4">첫 번째 AI 캐릭터를 만들어보세요!</p>
+                <h4 className="text-lg font-semibold text-foreground mb-2">No AI Characters Yet</h4>
+                <p className="text-muted mb-4">Create your first AI character to get started!</p>
                 <button
                   onClick={handleCreateChatbot}
                   className="bg-warning hover:bg-warning/90 text-inverse font-medium py-2 px-4 rounded-xl transition-colors"
                 >
-                  지금 만들기
+                  Create Now
                 </button>
               </div>
             ) : (

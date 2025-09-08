@@ -77,7 +77,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<ChatRespo
     if (!session_id || !chatbot_id || !message) {
       return NextResponse.json({
         success: false,
-        error: '필수 입력값이 누락되었습니다 (session_id, chatbot_id, message)'
+        error: 'Required fields are missing (session_id, chatbot_id, message)'
       }, { status: 400 })
     }
 
@@ -92,7 +92,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<ChatRespo
       console.error('❌ 세션 조회 실패:', sessionError)
       return NextResponse.json({
         success: false,
-        error: '유효하지 않은 세션입니다'
+        error: 'Invalid session'
       }, { status: 401 })
     }
 
@@ -109,7 +109,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<ChatRespo
       console.error('❌ 챗봇 조회 실패:', chatbotError)
       return NextResponse.json({
         success: false,
-        error: '해당 챗봇을 찾을 수 없습니다'
+        error: 'Chatbot not found'
       }, { status: 404 })
     }
 
@@ -132,7 +132,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<ChatRespo
         console.error('❌ 채팅 세션 생성 실패:', sessionCreateError)
         return NextResponse.json({
           success: false,
-          error: '채팅 세션 생성에 실패했습니다'
+          error: 'Failed to create chat session'
         }, { status: 500 })
       }
 
@@ -149,7 +149,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<ChatRespo
       if (sessionCheckError || !existingSession) {
         return NextResponse.json({
           success: false,
-          error: '유효하지 않은 채팅 세션입니다'
+          error: 'Invalid chat session'
         }, { status: 404 })
       }
     }
@@ -170,7 +170,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<ChatRespo
       console.error('❌ 사용자 메시지 저장 실패:', userMessageError)
       return NextResponse.json({
         success: false,
-        error: '메시지 저장에 실패했습니다'
+        error: 'Failed to save message'
       }, { status: 500 })
     }
 
@@ -223,7 +223,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<ChatRespo
       console.error('❌ Claude API 응답 실패:', { claudeResponse, type: typeof claudeResponse })
       return NextResponse.json({
         success: false,
-        error: `AI 응답 생성에 실패했습니다`
+        error: `Failed to generate AI response`
       }, { status: 500 })
     }
 
@@ -244,7 +244,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<ChatRespo
       console.error('❌ 어시스턴트 메시지 저장 실패:', assistantMessageError)
       return NextResponse.json({
         success: false,
-        error: '응답 저장에 실패했습니다'
+        error: 'Failed to save response'
       }, { status: 500 })
     }
 
@@ -319,7 +319,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<ChatRespo
     
     return NextResponse.json({
       success: false,
-      error: error instanceof Error ? error.message : '채팅 처리 중 예상치 못한 오류가 발생했습니다',
+      error: error instanceof Error ? error.message : 'An unexpected error occurred while processing the chat',
       response_time_ms: Date.now() - startTime
     }, { status: 500 })
   }
@@ -329,19 +329,19 @@ export async function POST(request: NextRequest): Promise<NextResponse<ChatRespo
 function createSystemPrompt(chatbot: any): string {
   const systemPrompt = `${chatbot.personality}
 
-추가 컨텍스트:
-- 당신의 이름: ${chatbot.name}
-- 나이: ${chatbot.age}세
-- 성별: ${chatbot.gender === 'female' ? '여성' : '남성'}
-- 사용자와의 관계: ${chatbot.relationship}
-- 컨셉/특성: ${chatbot.concept}
+Additional Context:
+- Your name: ${chatbot.name}
+- Age: ${chatbot.age} years old
+- Gender: ${chatbot.gender === 'female' ? 'Female' : 'Male'}
+- Relationship with user: ${chatbot.relationship}
+- Concept/Characteristics: ${chatbot.concept}
 
-대화 지침:
-1. 위에 설정된 성격과 말투를 일관성 있게 유지하세요
-2. 나이와 성별에 맞는 자연스러운 언어를 사용하세요  
-3. 사용자와의 관계를 고려한 적절한 친밀도로 대화하세요
-4. 설정된 컨셉과 특성을 대화에 자연스럽게 반영하세요
-5. 한국어로 대화하며, 자연스럽고 매력적인 응답을 제공하세요`
+Conversation Guidelines:
+1. Consistently maintain the personality and speaking style set above
+2. Use natural language appropriate for your age and gender
+3. Converse with appropriate intimacy considering your relationship with the user
+4. Naturally reflect the set concept and characteristics in conversation
+5. Communicate in English and provide natural, engaging responses`
 
   return systemPrompt
 }

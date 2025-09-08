@@ -20,7 +20,7 @@ export default function HomePage() {
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
           <div className="w-8 h-8 border-4 border-foreground border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-muted text-sm">초기화 중...</p>
+          <p className="text-muted text-sm">Initializing...</p>
         </div>
       </div>
     )
@@ -46,7 +46,7 @@ export default function HomePage() {
               onClick={() => router.push('/dashboard')}
               className="bg-warning text-inverse hover:bg-warning/90 px-3 sm:px-4 py-2 min-h-button-sm rounded-2xl shadow-sm hover:shadow-hover transition-all duration-200 flex items-center font-medium text-sm"
             >
-              시작하기
+              Get Started
             </button>
           </div>
         </div>
@@ -58,17 +58,17 @@ export default function HomePage() {
           {/* 히어로 섹션 */}
           <div className="mb-8">
             <h2 className="text-xl md:text-2xl font-bold text-foreground mb-2 leading-tight">
-              당신의 이상형과 다양한 상황에서 <span style={{ color: '#FFB805' }}>채팅을 해보세요.</span>
+              Chat with your ideal character in various situations <span style={{ color: '#FFB805' }}>anytime, anywhere.</span>
             </h2>
             <p className="text-muted text-sm leading-normal mb-6 max-w-2xl mx-auto">
-              Nano Banana 로 당신이 꿈꾸던 이상형을 만들고 다양한 상황에서 생동감 있는 비쥬얼 채팅을 진행 할 수 있습니다.
+              Create your dream character with NanoBanana and enjoy vivid visual chats in various situations.
             </p>
             
             <button
               onClick={() => router.push('/dashboard')}
               className="bg-warning text-inverse hover:bg-warning/90 px-6 py-3 rounded-2xl shadow-sm hover:shadow-hover transition-all duration-200 font-medium text-sm"
             >
-              바로 시작하기 →
+              Start Now →
             </button>
           </div>
 
@@ -78,10 +78,9 @@ export default function HomePage() {
               <div className="w-12 h-12 bg-warning rounded-2xl flex items-center justify-center mx-auto mb-4">
                 <span className="text-2xl">🚀</span>
               </div>
-              <h3 className="text-lg font-bold text-foreground mb-2">즉시 시작</h3>
+              <h3 className="text-lg font-bold text-foreground mb-2">Instant Start</h3>
               <p className="text-sm text-muted leading-normal">
-                <span className="font-medium text-warning">회원가입이나 로그인 없이</span> 브라우저만으로
-                바로 AI 캐릭터와 대화를 시작할 수 있습니다.
+                Start chatting with AI characters instantly <span className="font-medium text-warning">without registration or login</span>, using just your browser.
               </p>
             </div>
 
@@ -89,10 +88,9 @@ export default function HomePage() {
               <div className="w-12 h-12 bg-warning rounded-2xl flex items-center justify-center mx-auto mb-4">
                 <span className="text-2xl">🤖</span>
               </div>
-              <h3 className="text-lg font-bold text-foreground mb-2">AI 이미지 생성</h3>
+              <h3 className="text-lg font-bold text-foreground mb-2">AI Image Generation</h3>
               <p className="text-sm text-muted leading-normal">
-                <span className="font-medium text-warning">NanoBanana AI</span>를 사용해
-                나만의 캐릭터 프로필과 대화 중 이미지를 생성할 수 있습니다.
+                Create custom character profiles and chat images using <span className="font-medium text-warning">NanoBanana AI</span> technology.
               </p>
             </div>
 
@@ -100,10 +98,9 @@ export default function HomePage() {
               <div className="w-12 h-12 bg-warning rounded-2xl flex items-center justify-center mx-auto mb-4">
                 <span className="text-2xl">💬</span>
               </div>
-              <h3 className="text-lg font-bold text-foreground mb-2">자유로운 채팅</h3>
+              <h3 className="text-lg font-bold text-foreground mb-2">Free Unlimited Chat</h3>
               <p className="text-sm text-muted leading-normal">
-                <span className="font-medium text-warning">제한 없이 무료로</span><br className="hidden sm:block" />
-                <span className="sm:hidden"> </span>AI와 자연스러운 대화를 나누세요.
+                Enjoy natural conversations with AI <span className="font-medium text-warning">completely free with no limits</span>.
               </p>
             </div>
           </div>
@@ -116,7 +113,7 @@ export default function HomePage() {
         <div className="container mx-auto px-4 text-center">
           <div className="text-muted text-sm">
             <p>&copy; 2025 Banana Chat. All rights reserved.</p>
-            <p className="mt-2 text-xs">개인정보처리방침 | 이용약관</p>
+            <p className="mt-2 text-xs">Privacy Policy | Terms of Service</p>
           </div>
         </div>
       </footer>

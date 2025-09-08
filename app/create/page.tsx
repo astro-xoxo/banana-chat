@@ -55,7 +55,7 @@ export default function CreatePage() {
     e.preventDefault()
     
     if (!formData.name || !formData.relationship || !formData.concept) {
-      setError('모든 필수 항목을 입력해주세요')
+      setError('Please fill in all required fields')
       return
     }
 
@@ -136,11 +136,11 @@ export default function CreatePage() {
         setProfileImageUrl(result.profile_image_url || '')
         setCurrentStep('complete')
       } else {
-        throw new Error(result.error || '챗봇 생성에 실패했습니다')
+        throw new Error(result.error || 'Failed to create chatbot')
       }
     } catch (err) {
       console.error('챗봇 생성 오류:', err)
-      setError(err instanceof Error ? err.message : '챗봇 생성 중 오류가 발생했습니다')
+      setError(err instanceof Error ? err.message : 'An error occurred while creating the chatbot')
       setCurrentStep('error')
     } finally {
       setIsGenerating(false)
@@ -160,10 +160,10 @@ export default function CreatePage() {
             <Loader2 className="w-8 h-8 text-inverse animate-spin" />
           </div>
           <h2 className="text-xl font-bold text-foreground mb-2">
-            AI 캐릭터 생성 중...
+            Creating AI Character...
           </h2>
           <p className="text-muted mb-4">
-            NanoBanana AI가 당신만의 특별한 캐릭터를 만들고 있습니다
+            NanoBanana AI is creating your special character
           </p>
           <div className="w-full bg-background rounded-full h-2">
             <div className="bg-warning h-2 rounded-full animate-pulse" style={{ width: '70%' }}></div>
@@ -181,10 +181,10 @@ export default function CreatePage() {
             <CheckCircle className="w-8 h-8 text-white" />
           </div>
           <h2 className="text-xl font-bold text-foreground mb-2">
-            생성 완료! 🎉
+            Creation Complete! 🎉
           </h2>
           <p className="text-muted mb-6">
-            {formData.name} 캐릭터가 성공적으로 만들어졌습니다
+            {formData.name} character has been successfully created
           </p>
           
           {profileImageUrl && (
@@ -202,13 +202,13 @@ export default function CreatePage() {
               onClick={() => router.push(`/chat/${generatedChatbotId}`)}
               className="w-full bg-warning hover:bg-warning/90 text-inverse font-medium py-3 px-4 rounded-xl transition-colors"
             >
-              지금 채팅하기
+              Start Chatting Now
             </button>
             <button
               onClick={() => router.push('/dashboard')}
               className="w-full bg-surface-hover hover:bg-interactive-hover text-foreground font-medium py-3 px-4 rounded-xl transition-colors"
             >
-              대시보드로 가기
+              Go to Dashboard
             </button>
           </div>
         </div>
@@ -224,7 +224,7 @@ export default function CreatePage() {
             <span className="text-2xl">❌</span>
           </div>
           <h2 className="text-xl font-bold text-foreground mb-2">
-            생성 실패
+            Creation Failed
           </h2>
           <p className="text-muted mb-6">
             {error}
@@ -234,13 +234,13 @@ export default function CreatePage() {
               onClick={handleRetry}
               className="w-full bg-warning hover:bg-warning/90 text-inverse font-medium py-3 px-4 rounded-xl transition-colors"
             >
-              다시 시도
+              Try Again
             </button>
             <button
               onClick={() => router.push('/dashboard')}
               className="w-full bg-surface-hover hover:bg-interactive-hover text-foreground font-medium py-3 px-4 rounded-xl transition-colors"
             >
-              대시보드로 돌아가기
+              Back to Dashboard
             </button>
           </div>
         </div>
@@ -261,7 +261,7 @@ export default function CreatePage() {
               >
                 <ArrowLeft className="w-4 h-4 text-foreground" />
               </button>
-              <h1 className="text-lg font-bold text-foreground">새 AI 캐릭터 만들기</h1>
+              <h1 className="text-lg font-bold text-foreground">Create New AI Character</h1>
             </div>
           </div>
         </div>
@@ -273,9 +273,9 @@ export default function CreatePage() {
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* 참고 이미지 업로드 (선택사항) - 얼굴 크롭 기능 포함 */}
             <div className="bg-surface rounded-3xl p-6">
-              <h3 className="text-lg font-semibold text-foreground mb-4">참고 이미지 (선택사항)</h3>
+              <h3 className="text-lg font-semibold text-foreground mb-4">Reference Image (Optional)</h3>
               <p className="text-sm text-muted mb-4">
-                AI가 참조할 얼굴 이미지를 업로드하세요. 업로드 후 얼굴 영역을 크롭하게 됩니다.
+                Upload a face image for AI reference. You'll crop the face area after upload.
               </p>
               <ImageUploadWithCrop
                 onImageSelect={handleImageSelect}
@@ -285,7 +285,7 @@ export default function CreatePage() {
               {selectedImage && (
                 <div className="mt-4 p-3 bg-success/10 border border-success/20 rounded-xl">
                   <p className="text-sm text-success">
-                    ✅ 얼굴 크롭 완료: {selectedImage.name}
+                    ✅ Face crop completed: {selectedImage.name}
                   </p>
                 </div>
               )}
@@ -293,24 +293,24 @@ export default function CreatePage() {
 
             {/* 기본 정보 */}
             <div className="bg-surface rounded-3xl p-6 space-y-4">
-              <h3 className="text-lg font-semibold text-foreground mb-4">기본 정보</h3>
+              <h3 className="text-lg font-semibold text-foreground mb-4">Basic Information</h3>
               
               {/* 이름 */}
               <div>
-                <label className="block text-foreground font-medium mb-2">캐릭터 이름 *</label>
+                <label className="block text-foreground font-medium mb-2">Character Name *</label>
                 <input
                   type="text"
                   value={formData.name}
                   onChange={(e) => setFormData({...formData, name: e.target.value})}
                   className="w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground placeholder:text-muted focus:border-warning focus:outline-none"
-                  placeholder="예: 지수, 민준, 사라 등"
+                  placeholder="e.g. Sarah, Alex, Emma, etc."
                   required
                 />
               </div>
 
               {/* 나이 */}
               <div>
-                <label className="block text-foreground font-medium mb-2">나이 *</label>
+                <label className="block text-foreground font-medium mb-2">Age *</label>
                 <input
                   type="number"
                   value={formData.age}
@@ -324,7 +324,7 @@ export default function CreatePage() {
 
               {/* 성별 */}
               <div>
-                <label className="block text-foreground font-medium mb-2">성별 *</label>
+                <label className="block text-foreground font-medium mb-2">Gender *</label>
                 <div className="flex space-x-3">
                   <button
                     type="button"
@@ -335,7 +335,7 @@ export default function CreatePage() {
                         : 'bg-background border border-border text-foreground hover:bg-surface-hover'
                     }`}
                   >
-                    여성
+                    Female
                   </button>
                   <button
                     type="button"
@@ -346,19 +346,19 @@ export default function CreatePage() {
                         : 'bg-background border border-border text-foreground hover:bg-surface-hover'
                     }`}
                   >
-                    남성
+                    Male
                   </button>
                 </div>
               </div>
 
               {/* 관계 */}
               <div>
-                <label className="block text-foreground font-medium mb-2">나와의 관계 *</label>
+                <label className="block text-foreground font-medium mb-2">Relationship with Me *</label>
                 <textarea
                   value={formData.relationship}
                   onChange={(e) => setFormData({...formData, relationship: e.target.value})}
                   className="w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground placeholder:text-muted focus:border-warning focus:outline-none resize-none"
-                  placeholder="예: 친한 친구, 연인, 동료, 선배, 후배 등... 자세히 설명해주세요"
+                  placeholder="e.g. Close friend, romantic partner, colleague, mentor, etc... Please describe in detail"
                   rows={3}
                   required
                 />
@@ -366,12 +366,12 @@ export default function CreatePage() {
 
               {/* 컨셉/특성 */}
               <div>
-                <label className="block text-foreground font-medium mb-2">캐릭터 컨셉/특성 *</label>
+                <label className="block text-foreground font-medium mb-2">Character Concept/Traits *</label>
                 <textarea
                   value={formData.concept}
                   onChange={(e) => setFormData({...formData, concept: e.target.value})}
                   className="w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground placeholder:text-muted focus:border-warning focus:outline-none resize-none"
-                  placeholder="예: 밝고 활발한 성격, 요리를 좋아하는 카페 사장, 책을 좋아하는 조용한 성격, 유머러스하고 장난기 많은 성격 등... 어떤 캐릭터인지 자세히 설명해주세요"
+                  placeholder="e.g. Bright and energetic personality, cafe owner who loves cooking, quiet bookworm, humorous and playful character, etc... Please describe what kind of character this is in detail"
                   rows={4}
                   required
                 />
@@ -393,10 +393,10 @@ export default function CreatePage() {
               {isGenerating ? (
                 <span className="flex items-center justify-center">
                   <Loader2 className="w-5 h-5 animate-spin mr-2" />
-                  AI 캐릭터 생성 중...
+                  Creating AI Character...
                 </span>
               ) : (
-                'AI 캐릭터 생성하기'
+                'Create AI Character'
               )}
             </button>
           </form>
