@@ -58,19 +58,17 @@ export default function HomePage() {
           {/* 히어로 섹션 */}
           <div className="mb-8">
             <h2 className="text-xl md:text-2xl font-bold text-foreground mb-2 leading-tight">
-              로그인 없이 바로<br className="xs:hidden" />
-              <span className="xs:inline"> </span><span style={{ color: '#FF7A59' }}>AI 캐릭터와 채팅</span>하세요
+              당신의 이상형과 다양한 상황에서 <span style={{ color: '#FF7A59' }}>채팅을 해보세요.</span>
             </h2>
             <p className="text-muted text-sm leading-normal mb-6 max-w-2xl mx-auto">
-              복잡한 가입 절차 없이 브라우저만으로 바로 시작할 수 있습니다.<br className="hidden sm:block" />
-              <span className="sm:hidden"> </span><span className="font-medium text-foreground">나만의 AI 캐릭터</span>를 만들고 자유롭게 대화해보세요.
+              Nano Banana 로 당신이 꿈꾸던 이상형을 만들고 다양한 상황에서 생동감 있는 비쥬얼 채팅을 진행 할 수 있습니다.
             </p>
             
             <button
               onClick={() => router.push('/dashboard')}
               className="bg-warning text-inverse hover:bg-warning/90 px-6 py-3 rounded-2xl shadow-sm hover:shadow-hover transition-all duration-200 font-medium text-sm"
             >
-              무료로 바로 시작하기 →
+              바로 시작하기 →
             </button>
           </div>
 
