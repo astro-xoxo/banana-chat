@@ -72,19 +72,37 @@ export async function POST(request: NextRequest): Promise<NextResponse<ProfileGe
       }, { status: 400 })
     }
 
-    // 3. 세션 유효성 확인
-    const { data: sessionData, error: sessionError } = await supabase
+    // 3. 세션 유효성 확인 및 자동 생성
+    let { data: sessionData, error: sessionError } = await supabase
       .from('anonymous_sessions')
       .select('id, session_id')
       .eq('session_id', session_id)
       .single()
 
+    // 세션이 DB에 없으면 자동으로 생성
     if (sessionError || !sessionData) {
-      console.error('❌ 세션 조회 실패:', sessionError)
-      return NextResponse.json({
-        success: false,
-        error: '유효하지 않은 세션입니다'
-      }, { status: 401 })
+      console.log('🔄 세션이 DB에 없음, 자동 생성 시도:', session_id)
+      
+      const { data: newSession, error: createError } = await supabase
+        .from('anonymous_sessions')
+        .insert({
+          session_id,
+          created_at: new Date().toISOString(),
+          last_activity: new Date().toISOString()
+        })
+        .select('id, session_id')
+        .single()
+
+      if (createError || !newSession) {
+        console.error('❌ 세션 자동 생성 실패:', createError)
+        return NextResponse.json({
+          success: false,
+          error: '세션 처리 중 오류가 발생했습니다'
+        }, { status: 500 })
+      }
+
+      sessionData = newSession
+      console.log('✅ 세션 자동 생성 완료:', session_id)
     }
 
     // 4. 이미 같은 이름의 챗봇이 있는지 확인

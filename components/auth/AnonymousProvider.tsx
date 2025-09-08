@@ -103,8 +103,11 @@ export function AnonymousProvider({ children }: { children: ReactNode }) {
     // localStorage에 저장
     saveSession(newSession)
     
-    // DB에도 저장
-    await saveSessionToDB(newSession)
+    // DB에도 저장 시도 (실패해도 세션은 유지)
+    const dbSaveResult = await saveSessionToDB(newSession)
+    if (!dbSaveResult) {
+      console.warn('⚠️ DB 저장 실패했지만 localStorage 세션으로 계속 진행:', newSession.sessionId)
+    }
     
     return newSession
   }
