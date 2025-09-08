@@ -4,6 +4,7 @@
  */
 
 import { ClaudeClient } from '@/lib/claude'
+import { getFixedPromptService } from '../prompt-templates/FixedPromptService'
 import type { MessageContext } from './types'
 
 interface PromptConversionResult {
@@ -21,6 +22,7 @@ interface PromptConversionResult {
 
 export class ClaudePromptConverter {
   private claudeClient: ClaudeClient
+  private promptService = getFixedPromptService()
 
   constructor() {
     this.claudeClient = new ClaudeClient()
@@ -46,32 +48,40 @@ export class ClaudePromptConverter {
       const systemPrompt = this.buildSystemPrompt(characterContext)
       const userPrompt = this.buildUserPrompt(messageContent)
 
-      // Claude API 호출
-      const response = await this.claudeClient.createMessage([
+      // Claude API 호출 (올바른 메소드 사용)
+      const claudeResponse = await this.claudeClient.generateResponse(
+        systemPrompt,
+        userPrompt,
         {
-          role: 'user',
-          content: userPrompt
+          model: 'claude-3-haiku-20240307',
+          maxTokens: 1000,
+          temperature: 0.7
         }
-      ], {
-        system: systemPrompt,
-        model: 'claude-3-haiku-20240307',
-        max_tokens: 1000,
-        temperature: 0.7
-      })
-
-      const claudeResponse = response.content[0].text
+      )
       console.log('✅ Claude 응답 받음:', claudeResponse.substring(0, 100) + '...')
 
       // 응답 파싱
       const parsedResult = this.parseClaudeResponse(claudeResponse, messageContent)
+      
+      if (parsedResult.success) {
+        // 스프레드시트 고정 프롬프트와 조합
+        const finalPrompts = await this.combineWithFixedPrompts(
+          parsedResult.positive_prompt,
+          parsedResult.negative_prompt,
+          context
+        );
+        
+        parsedResult.positive_prompt = finalPrompts.positive;
+        parsedResult.negative_prompt = finalPrompts.negative;
+      }
       
       return parsedResult
 
     } catch (error) {
       console.error('❌ Claude 프롬프트 변환 실패:', error)
       
-      // 폴백: 간단한 프롬프트 생성
-      return this.generateFallbackPrompt(messageContent, context)
+      // 폴백: Claude 간단 모드로 재시도
+      return await this.generateFallbackPrompt(messageContent, context)
     }
   }
 
@@ -217,15 +227,27 @@ ${characterContext}
       .replace(/\s+/g, ' ') // 공백 정리
       .trim()
 
-    // 필수 품질 키워드 추가 (중복 방지)
+    // 필수 품질 키워드 추가 (중복 방지) - 애니메이션 스타일 방지 강화, 한 명만, 사용자 얼굴 기반
     const qualityKeywords = [
+      'single person only',
+      'solo', 
+      'one person',
+      'photorealistic',
+      'realistic photography', 
+      'real person',
       'high quality',
       'detailed',
-      'professional digital art',
+      'professional photography',
+      'natural lighting',
       'beautiful composition',
-      'vibrant colors',
+      'sharp focus',
       '8k resolution',
-      'masterpiece'
+      'masterpiece',
+      'not animated',
+      'not cartoon',
+      'maintain facial features from reference image',
+      'consistent face structure',
+      'same person appearance'
     ]
 
     qualityKeywords.forEach(keyword => {
@@ -242,6 +264,25 @@ ${characterContext}
    */
   private optimizeNegativePrompt(baseNegative: string): string {
     const standardNegatives = [
+      'multiple people',
+      'two people',
+      '2girls',
+      '2boys', 
+      'couple',
+      'group',
+      'crowd',
+      'multiple faces',
+      'different person',
+      'face swap',
+      'anime',
+      'cartoon',
+      'animated',
+      '2d',
+      'illustration', 
+      'drawing',
+      'sketch',
+      'manga',
+      'stylized',
       'low quality',
       'blurry',
       'distorted',
@@ -260,52 +301,154 @@ ${characterContext}
   }
 
   /**
-   * 폴백 프롬프트 생성
+   * 스프레드시트 고정 프롬프트와 Claude 생성 프롬프트 조합
    */
-  private generateFallbackPrompt(
+  private async combineWithFixedPrompts(
+    claudePositivePrompt: string,
+    claudeNegativePrompt: string,
+    context: MessageContext
+  ): Promise<{ positive: string; negative: string }> {
+    try {
+      const char = context.user_preferences;
+      const relationshipType = char?.relationship || 'common';
+      const gender = char?.gender as 'male' | 'female' || 'female';
+
+      console.log('🔗 하드코딩 고정 프롬프트와 조합 시작:', {
+        relationshipType,
+        gender,
+        claudePromptLength: claudePositivePrompt.length
+      });
+
+      // 하드코딩된 고정 프롬프트 가져오기
+      const finalPrompts = await this.promptService.buildFinalPrompt(
+        claudePositivePrompt,
+        relationshipType,
+        gender
+      );
+
+      // Claude의 negative prompt와 조합
+      const combinedNegative = [
+        finalPrompts.negative,
+        claudeNegativePrompt
+      ].filter(Boolean).join(', ');
+
+      console.log('✅ 하드코딩 고정 프롬프트 조합 완료:', {
+        finalPositiveLength: finalPrompts.positive.length,
+        finalNegativeLength: combinedNegative.length
+      });
+
+      return {
+        positive: finalPrompts.positive,
+        negative: combinedNegative
+      };
+
+    } catch (error) {
+      console.warn('⚠️ 하드코딩 프롬프트 조합 실패, 원본 사용:', error);
+      return {
+        positive: claudePositivePrompt,
+        negative: claudeNegativePrompt
+      };
+    }
+  }
+
+  /**
+   * 폴백 프롬프트 생성 (Claude 재시도 방식)
+   */
+  private async generateFallbackPrompt(
     messageContent: string,
     context: MessageContext
-  ): PromptConversionResult {
-    console.log('🔄 폴백 프롬프트 생성 중...')
+  ): Promise<PromptConversionResult> {
+    console.log('🔄 폴백 프롬프트 생성 중 (Claude 간단 모드)...')
 
-    // 간단한 키워드 매핑
-    const keywordMap: Record<string, string> = {
-      '고양이': 'cute cat, fluffy fur, adorable',
-      '강아지': 'cute puppy, friendly dog, happy',
-      '하늘': 'beautiful sky, clouds, peaceful',
-      '바다': 'ocean view, waves, serene',
-      '꽃': 'beautiful flowers, colorful blooms, nature',
-      '우울': 'melancholic atmosphere, soft lighting, emotional',
-      '행복': 'joyful scene, bright colors, cheerful',
-      '사랑': 'romantic atmosphere, warm lighting, love'
-    }
+    try {
+      // 캐릭터 컨텍스트 구성
+      const characterContext = this.buildCharacterContext(context)
+      
+      // 더 간단한 Claude 프롬프트 구성 (폴백용)
+      const simpleFallbackPrompt = `당신은 한국어 메시지를 영어 이미지 프롬프트로 변환하는 전문가입니다.
 
-    let prompt = 'beautiful scene'
-    
-    // 키워드 매칭
-    Object.entries(keywordMap).forEach(([korean, english]) => {
-      if (messageContent.includes(korean)) {
-        prompt = english
+${characterContext}
+
+다음 메시지를 간단한 영어 이미지 프롬프트로 변환해주세요:
+"${messageContent}"
+
+응답 형식:
+- 한 줄로 간단한 영어 이미지 설명
+- 인물 정보와 상황 포함
+- 고품질 키워드 포함`
+
+      // Claude API 호출 (더 낮은 온도와 짧은 토큰으로 안정성 확보)
+      const claudeResponse = await this.claudeClient.generateResponse(
+        simpleFallbackPrompt,
+        `메시지: "${messageContent}"`,
+        {
+          model: 'claude-3-haiku-20240307',
+          maxTokens: 300, // 더 짧게
+          temperature: 0.3 // 더 안정적으로
+        }
+      )
+
+      console.log('✅ Claude 폴백 응답 받음:', claudeResponse.substring(0, 100) + '...')
+
+      // 간단한 텍스트 응답으로 처리
+      let cleanPrompt = claudeResponse
+        .replace(/[\"']/g, '') // 따옴표 제거
+        .replace(/\n.*$/gm, '') // 첫 줄만 사용
+        .trim()
+
+      // 캐릭터 정보 추가
+      const char = context.user_preferences
+      if (char?.gender === 'female') {
+        cleanPrompt += `, featuring a beautiful ${char.age || 25}-year-old woman`
+      } else if (char?.gender === 'male') {
+        cleanPrompt += `, featuring a handsome ${char.age || 25}-year-old man`
       }
-    })
 
-    // 캐릭터 정보 반영
-    const char = context.user_preferences
-    if (char?.gender === 'female') {
-      prompt += ', featuring a beautiful woman'
-    } else if (char?.gender === 'male') {
-      prompt += ', featuring a handsome man'
-    }
+      // 하드코딩된 고정 프롬프트와 조합
+      const finalPrompts = await this.combineWithFixedPrompts(
+        this.optimizePositivePrompt(cleanPrompt),
+        this.optimizeNegativePrompt(''),
+        context
+      );
 
-    return {
-      success: true,
-      positive_prompt: this.optimizePositivePrompt(prompt),
-      negative_prompt: this.optimizeNegativePrompt(''),
-      analysis_info: {
-        message_type: 'direct',
-        detected_objects: [],
-        detected_emotions: [],
-        detected_actions: []
+      return {
+        success: true,
+        positive_prompt: finalPrompts.positive,
+        negative_prompt: finalPrompts.negative,
+        analysis_info: {
+          message_type: 'direct',
+          detected_objects: [],
+          detected_emotions: [],
+          detected_actions: []
+        }
+      }
+
+    } catch (fallbackError) {
+      console.warn('⚠️ Claude 폴백도 실패, 최종 기본 프롬프트 사용:', fallbackError)
+      
+      // 최종 폴백: 아주 기본적인 프롬프트
+      const char = context.user_preferences
+      const basicPrompt = char?.gender === 'female' 
+        ? `beautiful ${char.age || 25}-year-old woman, natural expression, soft lighting, high quality`
+        : `handsome ${char.age || 25}-year-old man, confident expression, natural lighting, high quality`
+
+      // 최종 폴백에도 하드코딩된 고정 프롬프트 적용
+      const finalPrompts = await this.combineWithFixedPrompts(
+        this.optimizePositivePrompt(basicPrompt),
+        this.optimizeNegativePrompt(''),
+        context
+      );
+
+      return {
+        success: true,
+        positive_prompt: finalPrompts.positive,
+        negative_prompt: finalPrompts.negative,
+        analysis_info: {
+          message_type: 'direct',
+          detected_objects: [],
+          detected_emotions: [],
+          detected_actions: []
+        }
       }
     }
   }

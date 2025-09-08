@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Progress } from '@/components/ui/progress'
 import { ChevronLeft, ChevronRight, Sparkles, User, MessageCircle, Heart, Users, Upload, Image as ImageIcon, Crop, Check, AlertCircle, Loader2 } from 'lucide-react'
-import ImageUpload from '@/components/images/ImageUpload'
+import ImageUploadWithCrop from '@/components/images/ImageUploadWithCrop'
 import ImageCrop from '@/components/images/ImageCrop'
 import AgeInput from './AgeInput'
 import RelationshipInput from './RelationshipInput'
@@ -255,9 +255,11 @@ export default function CharacterCreationWizard({
           {/* 1단계: 이미지 업로드 */}
           {currentStep === 0 && (
             <div className="flex justify-center">
-              <ImageUpload
+              <ImageUploadWithCrop
                 onImageSelect={handleImageSelect}
                 disabled={false}
+                uploadType="user-upload"
+                requireCrop={true}
               />
             </div>
           )}

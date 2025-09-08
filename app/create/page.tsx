@@ -1,9 +1,10 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAnonymousSession } from '@/components/auth/AnonymousProvider'
-import { ArrowLeft, Upload, Loader2, CheckCircle } from 'lucide-react'
+import { ArrowLeft, Loader2, CheckCircle } from 'lucide-react'
+import ImageUploadWithCrop from '@/components/images/ImageUploadWithCrop'
 
 interface ChatbotFormData {
   name: string
@@ -29,30 +30,25 @@ export default function CreatePage() {
     concept: ''
   })
   const [selectedImage, setSelectedImage] = useState<File | null>(null)
-  const [imagePreview, setImagePreview] = useState<string | null>(null)
   const [isGenerating, setIsGenerating] = useState(false)
   const [error, setError] = useState<string>('')
   const [generatedChatbotId, setGeneratedChatbotId] = useState<string>('')
   const [profileImageUrl, setProfileImageUrl] = useState<string>('')
 
   // 세션이 없으면 홈으로 리디렉션
+  useEffect(() => {
+    if (!session) {
+      router.push('/')
+    }
+  }, [session, router])
+
   if (!session) {
-    router.push('/')
     return null
   }
 
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (file) {
-      setSelectedImage(file)
-      
-      // 이미지 미리보기 생성
-      const reader = new FileReader()
-      reader.onload = (e) => {
-        setImagePreview(e.target?.result as string)
-      }
-      reader.readAsDataURL(file)
-    }
+  const handleImageSelect = (file: File) => {
+    setSelectedImage(file)
+    console.log('✅ 크롭된 얼굴 이미지 선택됨:', file.name, `${(file.size / 1024).toFixed(2)}KB`)
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -72,21 +68,48 @@ export default function CreatePage() {
       
       // 이미지 업로드 (선택사항)
       if (selectedImage) {
+        console.log('🖼️ 크롭된 이미지 업로드 시작:', {
+          fileName: selectedImage.name,
+          fileSize: selectedImage.size,
+          fileType: selectedImage.type,
+          sessionId: session.sessionId
+        })
+        
         const uploadFormData = new FormData()
         uploadFormData.append('file', selectedImage)
         uploadFormData.append('session_id', session.sessionId)
         
+        console.log('📤 업로드 API 호출 중...')
         const uploadResponse = await fetch('/api/upload/user-image', {
           method: 'POST',
           body: uploadFormData
         })
         
+        console.log('📥 업로드 응답:', {
+          status: uploadResponse.status,
+          ok: uploadResponse.ok,
+          statusText: uploadResponse.statusText
+        })
+        
         if (uploadResponse.ok) {
           const uploadResult = await uploadResponse.json()
+          console.log('✅ 업로드 결과:', uploadResult)
+          
           if (uploadResult.success) {
             userImageUrl = uploadResult.imageUrl
+            console.log('🎯 사용자 이미지 URL 설정됨:', userImageUrl)
+          } else {
+            console.error('❌ 업로드 실패:', uploadResult.error)
           }
+        } else {
+          const errorText = await uploadResponse.text()
+          console.error('❌ 업로드 HTTP 오류:', {
+            status: uploadResponse.status,
+            error: errorText
+          })
         }
+      } else {
+        console.log('ℹ️ 선택된 이미지가 없어서 업로드 건너뛰기')
       }
 
       // 챗봇 생성 (NanoBanana API 사용)
@@ -248,51 +271,24 @@ export default function CreatePage() {
       <main className="container mx-auto px-4 py-8">
         <div className="max-w-2xl mx-auto">
           <form onSubmit={handleSubmit} className="space-y-6">
-            {/* 참고 이미지 업로드 (선택사항) */}
+            {/* 참고 이미지 업로드 (선택사항) - 얼굴 크롭 기능 포함 */}
             <div className="bg-surface rounded-3xl p-6">
               <h3 className="text-lg font-semibold text-foreground mb-4">참고 이미지 (선택사항)</h3>
-              <div className="border-2 border-dashed border-border rounded-2xl p-6 text-center">
-                {imagePreview ? (
-                  <div className="space-y-4">
-                    <img 
-                      src={imagePreview} 
-                      alt="Preview" 
-                      className="w-32 h-32 rounded-2xl mx-auto object-cover"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setSelectedImage(null)
-                        setImagePreview(null)
-                      }}
-                      className="text-sm text-muted hover:text-foreground"
-                    >
-                      이미지 제거
-                    </button>
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    <Upload className="w-12 h-12 text-muted mx-auto" />
-                    <div>
-                      <p className="text-foreground font-medium mb-1">참고할 이미지를 업로드하세요</p>
-                      <p className="text-sm text-muted">원하는 스타일의 이미지를 올리면 더 정확한 캐릭터를 만들 수 있어요</p>
-                    </div>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={handleImageChange}
-                      className="hidden"
-                      id="image-upload"
-                    />
-                    <label
-                      htmlFor="image-upload"
-                      className="inline-flex items-center px-4 py-2 bg-surface-hover hover:bg-interactive-hover text-foreground rounded-xl cursor-pointer transition-colors"
-                    >
-                      이미지 선택
-                    </label>
-                  </div>
-                )}
-              </div>
+              <p className="text-sm text-muted mb-4">
+                AI가 참조할 얼굴 이미지를 업로드하세요. 업로드 후 얼굴 영역을 크롭하게 됩니다.
+              </p>
+              <ImageUploadWithCrop
+                onImageSelect={handleImageSelect}
+                uploadType="user-upload"
+                requireCrop={true}
+              />
+              {selectedImage && (
+                <div className="mt-4 p-3 bg-success/10 border border-success/20 rounded-xl">
+                  <p className="text-sm text-success">
+                    ✅ 얼굴 크롭 완료: {selectedImage.name}
+                  </p>
+                </div>
+              )}
             </div>
 
             {/* 기본 정보 */}

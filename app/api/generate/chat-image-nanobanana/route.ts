@@ -83,7 +83,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<ChatImage
     // 4. 챗봇 정보 조회 (이미지 생성에 필요한 컨텍스트)
     const { data: chatbot, error: chatbotError } = await supabase
       .from('chatbots')
-      .select('id, name, age, gender, relationship, concept, personality')
+      .select('id, name, age, gender, relationship, concept, personality, user_uploaded_image_url')
       .eq('id', chatbot_id)
       .eq('session_id', session_id)
       .eq('is_active', true)
@@ -149,13 +149,24 @@ export async function POST(request: NextRequest): Promise<NextResponse<ChatImage
 
     console.log('🔄 Gemini 프롬프트 변환 완료:', geminiPrompt.substring(0, 150) + '...')
 
-    // 7. NanoBanana 서비스로 채팅 이미지 생성
+    // 7. NanoBanana 서비스로 채팅 이미지 생성 (사용자 이미지 포함)
     const nanoBananaService = createNanoBananaService()
     
-    // NanoBanana 서비스의 generateChatImageWithPrompt 메서드를 직접 프롬프트로 호출
+    // 사용자 업로드 이미지 URL 가져오기 (얼굴 기준 이미지)
+    const userImageUrl = chatbot.user_uploaded_image_url
+    console.log('🖼️ 사용자 업로드 이미지 상세:', {
+      hasImage: !!userImageUrl,
+      imageUrl: userImageUrl,
+      urlLength: userImageUrl?.length || 0,
+      chatbotId: chatbot.id,
+      chatbotName: chatbot.name
+    })
+    
+    // NanoBanana 서비스에 사용자 이미지와 함께 요청
     const imageResult = await nanoBananaService.generateChatImageWithPrompt(
       geminiPrompt,
-      aspect_ratio
+      aspect_ratio,
+      userImageUrl // 사용자 얼굴 기준 이미지 추가
     )
     
     if (!imageResult.success) {
@@ -275,8 +286,8 @@ function adaptPromptForGemini(
   // 4. 정리된 프롬프트와 컨텍스트 결합
   contextualPrompt += cleanPrompt
 
-  // 5. Gemini에 적합한 기본 품질 태그 추가
-  contextualPrompt += ', high quality, natural lighting, detailed, photorealistic, East Asian features'
+  // 5. Gemini에 적합한 기본 품질 태그 추가 (애니메이션 방지 강화, 한 명만, 사용자 얼굴 기반)
+  contextualPrompt += ', single person only, solo, one person, realistic photography, photorealistic, real person, natural lighting, detailed, professional photography, sharp focus, East Asian features, not animated, not cartoon, maintain facial features from reference image, consistent face structure, same person appearance'
 
   // 6. 감정 정보 추가 (있는 경우)
   if (keywords?.emotions && keywords.emotions.length > 0) {
