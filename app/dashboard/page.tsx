@@ -105,10 +105,10 @@ export default function DashboardPage() {
           {/* 웰컴 메시지 */}
           <div className="text-center mb-8">
             <h2 className="text-2xl font-bold text-foreground mb-2">
-              AI 캐릭터와 자유롭게 채팅하세요
+              당신의 이상형과 다양한 상황에서 채팅을 해보세요.
             </h2>
             <p className="text-muted">
-              로그인 없이 바로 시작할 수 있습니다. 나만의 AI 캐릭터를 만들고 채팅해보세요.
+              나만의 캐릭터를 Nano Banana 로 만들고 채팅해보세요.
             </p>
           </div>
 
