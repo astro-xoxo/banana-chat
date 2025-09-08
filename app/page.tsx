@@ -108,27 +108,6 @@ export default function HomePage() {
             </div>
           </div>
 
-          {/* CTA 섹션 */}
-          <div className="bg-surface rounded-3xl text-foreground mb-8 p-6 border border-border">
-            <div className="text-center">
-              <h3 className="text-xl font-bold mb-2">
-                지금 바로 시작해보세요! 🍌
-              </h3>
-              <p className="text-muted mb-6 text-sm leading-normal">
-                <span className="font-medium">로그인 절차 없이</span> 바로 이용 가능합니다.<br className="hidden sm:block" />
-                <span className="sm:hidden"> </span>브라우저만 있으면 언제든지 AI와 채팅할 수 있어요.
-              </p>
-              <button
-                onClick={() => router.push('/dashboard')}
-                className="bg-warning text-inverse hover:bg-warning/90 px-6 py-3 rounded-2xl text-sm font-medium transition-colors shadow-sm"
-              >
-                <span className="flex items-center justify-center">
-                  <span className="text-xl mr-2">🚀</span>
-                  <span className="whitespace-nowrap">바로 시작하기</span>
-                </span>
-              </button>
-            </div>
-          </div>
         </div>
       </main>
 
