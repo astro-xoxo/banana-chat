@@ -5,17 +5,17 @@
 :root {
   /* ===== AI Face Chat Lite 브랜드 컬러 시스템 (LobeChat 패턴 적용) ===== */
   
-  /* Primary Brand Color - 따뜻한 코랄 오렌지 */
-  --primary: #FF7A59;
-  --primary-hover: #FF6B47;
-  --primary-active: #FF5A35;
-  --primary-light: #FFB5A0;
+  /* Primary Brand Color - 따뜻한 골드 오렌지 */
+  --primary: #FFB805;
+  --primary-hover: #E6A605;
+  --primary-active: #D4950A;
+  --primary-light: #FFF0C7;
   --primary-50: #FFF7F5;
   --primary-100: #FFEDE8;
   --primary-200: #FFD4C6;
-  --primary-500: #FF7A59;
-  --primary-600: #FF6B47;
-  --primary-700: #FF5A35;
+  --primary-500: #FFB805;
+  --primary-600: #E6A605;
+  --primary-700: #D4950A;
   --primary-900: #B8421C;
   
   /* Secondary Brand Color - 부드러운 보라 블루 */
@@ -370,7 +370,7 @@ body {
   .input-base:focus {
     outline: none;
     border-color: var(--input-border-focus);
-    box-shadow: 0 0 0 3px rgb(255 122 89 / 0.1);
+    box-shadow: 0 0 0 3px rgb(255 184 5 / 0.1);
   }
   
   .input-base::placeholder {

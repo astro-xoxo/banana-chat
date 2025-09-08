@@ -32,7 +32,7 @@ export default function RootLayout({
     <html lang="ko" className="h-full">
       <head>
         <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
-        <meta name="theme-color" content="#FF7A59" />
+        <meta name="theme-color" content="#FFB805" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
         <meta name="format-detection" content="telephone=no" />

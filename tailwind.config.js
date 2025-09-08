@@ -24,8 +24,8 @@ module.exports = {
           200: '#fad4c1',
           300: '#f7ba9c',
           400: '#f49871',
-          DEFAULT: '#FF7A59', // 프로젝트 전용 주주색 (#FF7A59)
-          500: '#FF7A59',
+          DEFAULT: '#FFB805', // 프로젝트 전용 주주색 (#FFB805)
+          500: '#FFB805',
           600: '#e6694d',
           700: '#cc5a42',
           800: '#b34a36',
@@ -52,9 +52,9 @@ module.exports = {
           light: '#dcfce7',
         },
         warning: {
-          DEFAULT: '#ea580c', // 따뜻한 오렌지
-          hover: '#c2410c', 
-          light: '#fed7aa',
+          DEFAULT: '#FFB805', // 밝은 골드 오렌지
+          hover: '#E6A605', 
+          light: '#FFF0C7',
         },
         error: {
           DEFAULT: '#dc2626', // 명확한 레드

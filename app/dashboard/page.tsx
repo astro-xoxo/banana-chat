@@ -105,10 +105,10 @@ export default function DashboardPage() {
           {/* 웰컴 메시지 */}
           <div className="text-center mb-8">
             <h2 className="text-2xl font-bold text-foreground mb-2">
-              당신의 이상형과 다양한 상황에서 채팅을 해보세요.
+              당신의 이상형과 다양한 상황에서 <span style={{ color: 'rgb(255, 184, 5)' }}>채팅을 해보세요.</span>
             </h2>
-            <p className="text-muted">
-              나만의 캐릭터를 Nano Banana 로 만들고 채팅해보세요.
+            <p className="text-muted text-sm">
+              Nano Banana 로 당신이 꿈꾸던 이상형을 만들고 다양한 상황에서 생동감 있는 비쥬얼 채팅을 진행 할 수 있습니다.
             </p>
           </div>
 
