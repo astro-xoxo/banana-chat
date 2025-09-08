@@ -122,23 +122,46 @@ export async function POST(request: NextRequest): Promise<NextResponse<ProfileGe
     }
 
     // 5. NanoBanana 서비스로 프로필 이미지 생성
-    const nanoBananaService = createNanoBananaService()
-    
-    // GenerateProfileParams 형태로 변환 (기존 인터페이스 호환)
-    const profileParams = {
-      chatbot_name,
-      preset_id: `${age}-${gender}-${relationship.substring(0, 20)}`, // 간단한 preset_id 생성
-      user_image_url: user_uploaded_image_url,
-      user_id: session_id
-    }
+    console.log('🎨 NanoBanana 이미지 생성 시작')
+    let imageResult: any
+    try {
+      const nanoBananaService = createNanoBananaService()
+      console.log('✅ NanoBanana 서비스 생성 완료')
+      
+      // GenerateProfileParams 형태로 변환 (기존 인터페이스 호환)
+      const profileParams = {
+        chatbot_name,
+        preset_id: `${age}-${gender}-${relationship.substring(0, 20)}`, // 간단한 preset_id 생성
+        user_image_url: user_uploaded_image_url,
+        user_id: session_id
+      }
 
-    const imageResult = await nanoBananaService.generateProfile(profileParams)
-    
-    if (!imageResult.success) {
-      console.error('❌ 이미지 생성 실패:', imageResult.error)
+      console.log('📝 프로필 파라미터:', {
+        chatbot_name,
+        preset_id: profileParams.preset_id,
+        hasUserImage: !!user_uploaded_image_url,
+        user_id: session_id
+      })
+
+      imageResult = await nanoBananaService.generateProfile(profileParams)
+      console.log('🎯 이미지 생성 결과:', {
+        success: imageResult.success,
+        hasUrl: !!imageResult.profile_image_url,
+        error: imageResult.error
+      })
+      
+      if (!imageResult.success) {
+        console.error('❌ 이미지 생성 실패:', imageResult.error)
+        return NextResponse.json({
+          success: false,
+          error: `이미지 생성 실패: ${imageResult.error}`
+        }, { status: 500 })
+      }
+    } catch (serviceError) {
+      console.error('❌ NanoBanana 서비스 오류:', serviceError)
       return NextResponse.json({
         success: false,
-        error: `이미지 생성 실패: ${imageResult.error}`
+        error: `서비스 오류: ${serviceError instanceof Error ? serviceError.message : 'Unknown error'}`
       }, { status: 500 })
     }
 
