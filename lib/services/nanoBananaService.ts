@@ -61,7 +61,18 @@ export class NanoBananaService implements ImageGenerationService {
       // 프롬프트 생성 (사용자 입력 기반)
       const imagePrompt = this.createProfilePrompt(params)
       console.log('📝 생성된 프롬프트:', imagePrompt)
+      console.log('🖼️ 사용자 이미지 URL:', {
+        hasUserImage: !!params.user_image_url,
+        url: params.user_image_url
+      })
       
+      // 사용자 이미지가 있는 경우 이미지-투-이미지 방식으로 생성
+      if (params.user_image_url) {
+        console.log('🎨 사용자 이미지 기반 생성으로 전환')
+        return await this.generateChatImageWithPrompt(imagePrompt, 'SQUARE', params.user_image_url)
+      }
+      
+      // 사용자 이미지가 없는 경우 기존 방식 (텍스트-투-이미지)
       // Gemini API 요청 구성 (올바른 형식)
       const requestBody: GeminiImageRequest = {
         contents: [{
@@ -234,19 +245,11 @@ export class NanoBananaService implements ImageGenerationService {
       console.log('📝 채팅 이미지 프롬프트:', imagePrompt)
       
       const requestBody: GeminiImageRequest = {
-        prompt: imagePrompt,
-        aspectRatio: 'LANDSCAPE', // 채팅 이미지는 가로형
-        personGeneration: 'ALLOW',
-        safetySettings: [
-          {
-            category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT',
-            threshold: 'BLOCK_LOW_AND_ABOVE'
-          },
-          {
-            category: 'HARM_CATEGORY_HATE_SPEECH',
-            threshold: 'BLOCK_MEDIUM_AND_ABOVE'
-          }
-        ]
+        contents: [{
+          parts: [{
+            text: imagePrompt
+          }]
+        }]
       }
 
       const response = await fetch(`${this.baseUrl}?key=${this.apiKey}`, {
@@ -265,13 +268,58 @@ export class NanoBananaService implements ImageGenerationService {
       }
 
       const result: GeminiImageResponse = await response.json()
+      
+      // Gemini API 응답 디버깅 로그 추가
+      console.log('🔍 Gemini API 응답 구조:', {
+        hasError: !!result.error,
+        hasCandidates: !!result.candidates,
+        candidatesCount: result.candidates?.length || 0,
+        firstCandidate: result.candidates?.[0] ? {
+          hasContent: !!result.candidates[0].content,
+          partsCount: result.candidates[0].content?.parts?.length || 0,
+          finishReason: result.candidates[0].finishReason,
+          safetyRatings: result.candidates[0].safetyRatings
+        } : null
+      })
 
       if (result.error || !result.candidates?.[0]) {
+        console.error('❌ Gemini API 에러:', result.error || 'candidates 없음')
         throw new Error('채팅 이미지 생성 실패')
       }
 
       const candidate = result.candidates[0]
-      const imageUrl = candidate.image.imageUrl
+      
+      // 안전성 검사 실패 체크
+      if (candidate.finishReason !== 'STOP') {
+        console.warn('🍌 이미지 생성 중단됨:', candidate.finishReason)
+        if (candidate.safetyRatings) {
+          console.warn('🍌 안전성 등급:', candidate.safetyRatings)
+        }
+        throw new Error(`이미지 생성이 안전성 정책으로 인해 중단되었습니다: ${candidate.finishReason}`)
+      }
+
+      // 응답 parts 상세 로그
+      console.log('📦 응답 parts 상세:', {
+        totalParts: candidate.content?.parts?.length || 0,
+        parts: candidate.content?.parts?.map((part, idx) => ({
+          index: idx,
+          hasText: !!part.text,
+          hasInlineData: !!part.inlineData,
+          mimeType: part.inlineData?.mimeType,
+          dataLength: part.inlineData?.data?.length || 0
+        }))
+      })
+
+      // 이미지 데이터 추출 (base64 형식)
+      const imagePart = candidate.content.parts.find(part => part.inlineData?.mimeType.startsWith('image/'))
+      if (!imagePart || !imagePart.inlineData) {
+        console.error('❌ 이미지 파트를 찾을 수 없음. 전체 응답:', JSON.stringify(result, null, 2))
+        throw new Error('생성된 이미지 데이터를 찾을 수 없습니다')
+      }
+
+      // base64 이미지를 data URL로 변환하거나 Supabase에 저장할 수 있음
+      // 여기서는 간단히 data URL로 반환
+      const imageUrl = `data:${imagePart.inlineData.mimeType};base64,${imagePart.inlineData.data}`
       const generationTime = Date.now() - startTime
 
       return {
@@ -281,7 +329,9 @@ export class NanoBananaService implements ImageGenerationService {
         metadata: {
           service: 'nanobanana',
           type: 'chat_image',
-          prompt: imagePrompt
+          prompt: imagePrompt,
+          mimeType: imagePart.inlineData.mimeType,
+          safetyRatings: candidate.safetyRatings
         }
       }
 
@@ -297,22 +347,34 @@ export class NanoBananaService implements ImageGenerationService {
 
   // 프로필 이미지용 프롬프트 생성
   private createProfilePrompt(params: GenerateProfileParams): string {
-    const { chatbot_name, preset_id } = params
+    const { chatbot_name, preset_id, user_image_url } = params
     
-    // preset_id에서 사용자 입력 정보 추출 (실제로는 데이터베이스에서 가져와야 함)
-    // 여기서는 간단히 처리
-    const basePrompt = `A beautiful portrait of ${chatbot_name}, high quality, professional lighting, detailed facial features, warm expression`
+    let basePrompt: string
     
-    // 아시아인 스타일 추가
-    const stylePrompt = `${basePrompt}, East Asian features, natural makeup, soft lighting, studio portrait style`
+    if (user_image_url) {
+      // 사용자 이미지가 있는 경우: 얼굴 특성을 유지하면서 프로필 이미지 생성
+      basePrompt = `Generate a professional portrait photo based on the provided reference image. Keep the same facial features, face structure, and overall appearance as the reference person. Create a high-quality portrait photo of ${chatbot_name} with the same face as in the reference image`
+    } else {
+      // 사용자 이미지가 없는 경우: 기존 방식
+      basePrompt = `A beautiful portrait of ${chatbot_name}, high quality, professional lighting, detailed facial features, warm expression`
+    }
+    
+    // 공통 스타일 추가 (실내/야외 랜덤 배경 포함)
+    const stylePrompt = `${basePrompt}, professional headshot, natural makeup, soft lighting, studio portrait style, high resolution, photorealistic, random background setting either indoor space or outdoor environment`
+    
+    console.log('📝 프롬프트 생성:', {
+      hasUserImage: !!user_image_url,
+      prompt: stylePrompt.substring(0, 100) + '...'
+    })
     
     return stylePrompt
   }
 
-  // 메시지 분석 결과를 기반으로 한 채팅 이미지 생성 (새로운 메서드)
+  // 메시지 분석 결과를 기반으로 한 채팅 이미지 생성 (사용자 이미지 기반)
   async generateChatImageWithPrompt(
     geminiPrompt: string,
-    aspectRatio: 'SQUARE' | 'LANDSCAPE' | 'PORTRAIT' = 'LANDSCAPE'
+    aspectRatio: 'SQUARE' | 'LANDSCAPE' | 'PORTRAIT' = 'LANDSCAPE',
+    userImageUrl?: string
   ): Promise<ProfileResult> {
     console.log('🍌 NanoBanana 분석된 프롬프트 기반 채팅 이미지 생성 시작')
     
@@ -320,30 +382,15 @@ export class NanoBananaService implements ImageGenerationService {
       const startTime = Date.now()
       
       console.log('📝 분석된 프롬프트:', geminiPrompt)
+      console.log('🖼️ 사용자 이미지 URL 상세:', {
+        provided: !!userImageUrl,
+        url: userImageUrl,
+        length: userImageUrl?.length || 0,
+        willUseImageToImage: !!userImageUrl
+      })
       
-      const requestBody: GeminiImageRequest = {
-        prompt: geminiPrompt,
-        aspectRatio: aspectRatio,
-        personGeneration: 'ALLOW',
-        safetySettings: [
-          {
-            category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT',
-            threshold: 'BLOCK_LOW_AND_ABOVE'
-          },
-          {
-            category: 'HARM_CATEGORY_HATE_SPEECH',
-            threshold: 'BLOCK_MEDIUM_AND_ABOVE'
-          },
-          {
-            category: 'HARM_CATEGORY_HARASSMENT',
-            threshold: 'BLOCK_MEDIUM_AND_ABOVE'
-          },
-          {
-            category: 'HARM_CATEGORY_DANGEROUS_CONTENT',
-            threshold: 'BLOCK_MEDIUM_AND_ABOVE'
-          }
-        ]
-      }
+      // 사용자 이미지가 있는 경우 이미지-투-이미지로, 없으면 텍스트-투-이미지로 생성
+      const requestBody: GeminiImageRequest = await this.buildImageRequest(geminiPrompt, userImageUrl)
 
       const response = await fetch(`${this.baseUrl}?key=${this.apiKey}`, {
         method: 'POST',
@@ -371,11 +418,59 @@ export class NanoBananaService implements ImageGenerationService {
       // 안전성 검사 실패 체크
       if (candidate.finishReason !== 'STOP') {
         console.warn('🍌 이미지 생성 중단됨:', candidate.finishReason)
+        if (candidate.safetyRatings) {
+          console.warn('🍌 안전성 등급:', candidate.safetyRatings)
+        }
         throw new Error(`이미지 생성이 안전성 정책으로 인해 중단되었습니다: ${candidate.finishReason}`)
       }
 
-      const imageUrl = candidate.image.imageUrl
+      // 이미지 데이터 추출 (base64 형식)
+      const imagePart = candidate.content.parts.find(part => part.inlineData?.mimeType.startsWith('image/'))
+      if (!imagePart || !imagePart.inlineData) {
+        throw new Error('생성된 이미지 데이터를 찾을 수 없습니다')
+      }
+
+      // base64 이미지를 Supabase Storage에 저장
+      const imageBuffer = Buffer.from(imagePart.inlineData.data, 'base64')
+      const timestamp = Date.now()
+      const randomStr = Math.random().toString(36).substring(2, 8)
+      const fileName = `chat-${timestamp}-${randomStr}.png`
+      
+      // Supabase 클라이언트 생성
+      const { createClient } = await import('@supabase/supabase-js')
+      const supabase = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!
+      )
+
+      // generated-images 버킷에 저장
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('generated-images')
+        .upload(fileName, imageBuffer, {
+          contentType: 'image/png',
+          cacheControl: '3600',
+          upsert: false
+        })
+
+      if (uploadError) {
+        console.error('🍌 이미지 저장 실패:', uploadError)
+        throw new Error(`이미지 저장에 실패했습니다: ${uploadError.message}`)
+      }
+
+      // 공개 URL 생성
+      const { data: publicUrlData } = supabase.storage
+        .from('generated-images')
+        .getPublicUrl(fileName)
+
+      const imageUrl = publicUrlData.publicUrl
       const generationTime = Date.now() - startTime
+
+      console.log('🍌 NanoBanana 채팅 이미지 생성 및 저장 완료:', {
+        imageUrl,
+        generationTime,
+        mimeType: imagePart.inlineData.mimeType,
+        fileName
+      })
 
       return {
         success: true,
@@ -385,8 +480,8 @@ export class NanoBananaService implements ImageGenerationService {
           service: 'nanobanana',
           type: 'chat_image_analyzed',
           prompt: geminiPrompt,
-          aspectRatio,
-          altText: candidate.image.altText,
+          fileName: fileName,
+          mimeType: imagePart.inlineData.mimeType,
           safetyRatings: candidate.safetyRatings
         }
       }
@@ -439,6 +534,94 @@ export class NanoBananaService implements ImageGenerationService {
     const fullPrompt = `A ${relationshipDesc} portrait of a ${characterDesc}${conceptDesc}, ${situationDesc}, high quality, natural lighting, expressive, East Asian features`
     
     return fullPrompt
+  }
+
+  /**
+   * 이미지 요청 구성 (사용자 이미지 포함/미포함)
+   */
+  private async buildImageRequest(
+    prompt: string, 
+    userImageUrl?: string
+  ): Promise<GeminiImageRequest> {
+    console.log('🔧 buildImageRequest 호출:', {
+      hasUserImage: !!userImageUrl,
+      userImageUrl,
+      promptLength: prompt.length
+    });
+    
+    try {
+      if (userImageUrl) {
+        console.log('🖼️ 이미지-투-이미지 모드: 사용자 이미지 다운로드 시도 중...', userImageUrl);
+        
+        // 사용자 이미지 다운로드
+        const imageResponse = await fetch(userImageUrl);
+        console.log('📥 이미지 다운로드 응답:', {
+          status: imageResponse.status,
+          ok: imageResponse.ok,
+          contentType: imageResponse.headers.get('content-type'),
+          contentLength: imageResponse.headers.get('content-length')
+        });
+        
+        if (!imageResponse.ok) {
+          const errorText = await imageResponse.text().catch(() => 'Unknown error');
+          console.error('❌ 사용자 이미지 접근 실패:', {
+            status: imageResponse.status,
+            statusText: imageResponse.statusText,
+            error: errorText,
+            url: userImageUrl
+          });
+          throw new Error(`이미지 다운로드 실패: ${imageResponse.status} - ${errorText}`);
+        }
+        
+        const imageBuffer = await imageResponse.arrayBuffer();
+        const base64Image = Buffer.from(imageBuffer).toString('base64');
+        const mimeType = imageResponse.headers.get('content-type') || 'image/jpeg';
+        
+        console.log('✅ 사용자 이미지 다운로드 완료:', {
+          mimeType,
+          size: imageBuffer.byteLength
+        });
+
+        // 이미지-투-이미지 요청 구성
+        return {
+          contents: [{
+            parts: [
+              {
+                text: `Based on this reference image, generate a new image with the following description: ${prompt}. Keep the facial features and overall appearance similar to the reference image.`
+              },
+              {
+                inlineData: {
+                  mimeType: mimeType,
+                  data: base64Image
+                }
+              }
+            ]
+          }]
+        };
+      } else {
+        console.log('📝 텍스트-투-이미지 모드: 사용자 이미지가 없어서 텍스트만으로 생성');
+        
+        // 텍스트-투-이미지 요청 구성
+        return {
+          contents: [{
+            parts: [{
+              text: prompt
+            }]
+          }]
+        };
+      }
+    } catch (error) {
+      console.warn('⚠️ 사용자 이미지 처리 실패, 텍스트만으로 생성:', error);
+      
+      // 폴백: 텍스트만으로 생성
+      return {
+        contents: [{
+          parts: [{
+            text: prompt
+          }]
+        }]
+      };
+    }
   }
 }
 
