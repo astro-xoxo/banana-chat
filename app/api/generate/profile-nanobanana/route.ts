@@ -72,7 +72,17 @@ export async function POST(request: NextRequest): Promise<NextResponse<ProfileGe
       }, { status: 400 })
     }
 
-    // 3. 세션 유효성 확인 및 자동 생성
+    // 3. UUID 형식 검증
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+    if (!uuidRegex.test(session_id)) {
+      console.error('❌ 유효하지 않은 UUID 형식:', session_id)
+      return NextResponse.json({
+        success: false,
+        error: '유효하지 않은 세션 ID 형식입니다'
+      }, { status: 400 })
+    }
+
+    // 4. 세션 유효성 확인 및 자동 생성
     let { data: sessionData, error: sessionError } = await supabase
       .from('anonymous_sessions')
       .select('id, session_id')
@@ -95,6 +105,13 @@ export async function POST(request: NextRequest): Promise<NextResponse<ProfileGe
 
       if (createError || !newSession) {
         console.error('❌ 세션 자동 생성 실패:', createError)
+        console.error('❌ 에러 상세:', {
+          code: createError?.code,
+          message: createError?.message,
+          details: createError?.details,
+          hint: createError?.hint,
+          session_id
+        })
         return NextResponse.json({
           success: false,
           error: '세션 처리 중 오류가 발생했습니다'
@@ -105,7 +122,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<ProfileGe
       console.log('✅ 세션 자동 생성 완료:', session_id)
     }
 
-    // 4. 이미 같은 이름의 챗봇이 있는지 확인
+    // 5. 이미 같은 이름의 챗봇이 있는지 확인
     const { data: existingChatbot } = await supabase
       .from('chatbots')
       .select('id, name')
@@ -121,7 +138,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<ProfileGe
       }, { status: 409 })
     }
 
-    // 5. NanoBanana 서비스로 프로필 이미지 생성
+    // 6. NanoBanana 서비스로 프로필 이미지 생성
     console.log('🎨 NanoBanana 이미지 생성 시작')
     let imageResult: any
     try {
@@ -165,7 +182,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<ProfileGe
       }, { status: 500 })
     }
 
-    // 6. 사용자 입력 정보를 기반으로 말투/성격 생성
+    // 7. 사용자 입력 정보를 기반으로 말투/성격 생성
     const personality = generatePersonalityFromUserInput(
       chatbot_name, 
       age, 
@@ -174,7 +191,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<ProfileGe
       concept
     )
 
-    // 7. 챗봇 데이터베이스에 저장
+    // 8. 챗봇 데이터베이스에 저장
     const { data: chatbot, error: chatbotError } = await supabase
       .from('chatbots')
       .insert({
@@ -200,7 +217,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<ProfileGe
       }, { status: 500 })
     }
 
-    // 8. 생성된 이미지 추적 정보 저장
+    // 9. 생성된 이미지 추적 정보 저장
     if (imageResult.profile_image_url) {
       const { error: imageTrackError } = await supabase
         .from('generated_images')
@@ -220,7 +237,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<ProfileGe
       }
     }
 
-    // 9. 세션 활동 시간 업데이트
+    // 10. 세션 활동 시간 업데이트
     await supabase
       .from('anonymous_sessions')
       .update({ last_activity: new Date().toISOString() })
