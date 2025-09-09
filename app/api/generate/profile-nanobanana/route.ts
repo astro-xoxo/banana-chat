@@ -142,6 +142,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<ProfileGe
     console.log('🎨 NanoBanana 이미지 생성 시작')
     let imageResult: any
     try {
+      console.log('🔧 NanoBanana 서비스 생성 중...')
       const nanoBananaService = createNanoBananaService()
       console.log('✅ NanoBanana 서비스 생성 완료')
       

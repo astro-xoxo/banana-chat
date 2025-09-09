@@ -43,10 +43,37 @@ export class NanoBananaService implements ImageGenerationService {
   private readonly timeout: number = 60000 // 1분 타임아웃
 
   constructor() {
-    this.apiKey = process.env.BANANA_CHAT_API_KEY || process.env.NEXT_PUBLIC_NANOBANANA_API_KEY || ''
+    // 다양한 환경 변수명을 시도
+    const possibleKeys = [
+      process.env.BANANA_CHAT_API_KEY,
+      process.env.NEXT_PUBLIC_NANOBANANA_API_KEY,
+      process.env.GEMINI_API_KEY,
+      process.env.GOOGLE_AI_API_KEY,
+      // CLAUDE.md에서 명시된 키
+      'AIzaSyBiPQ2S68gWj6AYNy_Yql1EdEr_K5ME5lA'
+    ].filter(Boolean)
+
+    this.apiKey = possibleKeys[0] || 'AIzaSyBiPQ2S68gWj6AYNy_Yql1EdEr_K5ME5lA'
+    
+    console.log('🍌 NanoBanana 환경 변수 체크:', {
+      BANANA_CHAT_API_KEY: !!process.env.BANANA_CHAT_API_KEY,
+      NEXT_PUBLIC_NANOBANANA_API_KEY: !!process.env.NEXT_PUBLIC_NANOBANANA_API_KEY,
+      GEMINI_API_KEY: !!process.env.GEMINI_API_KEY,
+      GOOGLE_AI_API_KEY: !!process.env.GOOGLE_AI_API_KEY,
+      selectedApiKey: this.apiKey.substring(0, 10) + '...',
+      availableKeys: possibleKeys.length
+    })
     
     if (!this.apiKey) {
-      throw new Error('NanoBanana API 키가 설정되지 않았습니다. BANANA_CHAT_API_KEY 환경변수를 확인하세요.')
+      console.error('❌ 모든 API 키 확인 실패:', {
+        env_vars: {
+          BANANA_CHAT_API_KEY: process.env.BANANA_CHAT_API_KEY,
+          NEXT_PUBLIC_NANOBANANA_API_KEY: process.env.NEXT_PUBLIC_NANOBANANA_API_KEY,
+          GEMINI_API_KEY: process.env.GEMINI_API_KEY,
+          GOOGLE_AI_API_KEY: process.env.GOOGLE_AI_API_KEY,
+        }
+      })
+      throw new Error('NanoBanana API 키가 설정되지 않았습니다. 환경변수를 확인하세요.')
     }
     
     console.log('🍌 NanoBanana 서비스 초기화 완료')
