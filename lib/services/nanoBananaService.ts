@@ -167,12 +167,11 @@ export class NanoBananaService implements ImageGenerationService {
       const randomStr = Math.random().toString(36).substring(2, 8)
       const fileName = `profile-${params.user_id}-${timestamp}-${randomStr}.png`
       
-      // Supabase 클라이언트 생성
+      // Supabase 클라이언트 생성 (환경 변수 정리)
       const { createClient } = await import('@supabase/supabase-js')
-      const supabase = createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.SUPABASE_SERVICE_ROLE_KEY!
-      )
+      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim() || 'https://tcvtwqjphkqeqpawdfvu.supabase.co'
+      const serviceRoleKey = (process.env.SUPABASE_SERVICE_ROLE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRjdnR3cWpwaGtxZXFwYXdkZnZ1Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NzIzNDEwMSwiZXhwIjoyMDcyODEwMTAxfQ.0XQuW0jT324m_WUtIQJKRSbr4p3su6W-OhBLAGRumMA').replace(/[\n\r\s]/g, '')
+      const supabase = createClient(supabaseUrl, serviceRoleKey)
 
       // generated-images 버킷에 저장
       const { data: uploadData, error: uploadError } = await supabase.storage
@@ -463,12 +462,11 @@ export class NanoBananaService implements ImageGenerationService {
       const randomStr = Math.random().toString(36).substring(2, 8)
       const fileName = `chat-${timestamp}-${randomStr}.png`
       
-      // Supabase 클라이언트 생성
+      // Supabase 클라이언트 생성 (환경 변수 정리)
       const { createClient } = await import('@supabase/supabase-js')
-      const supabase = createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.SUPABASE_SERVICE_ROLE_KEY!
-      )
+      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim() || 'https://tcvtwqjphkqeqpawdfvu.supabase.co'
+      const serviceRoleKey = (process.env.SUPABASE_SERVICE_ROLE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRjdnR3cWpwaGtxZXFwYXdkZnZ1Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NzIzNDEwMSwiZXhwIjoyMDcyODEwMTAxfQ.0XQuW0jT324m_WUtIQJKRSbr4p3su6W-OhBLAGRumMA').replace(/[\n\r\s]/g, '')
+      const supabase = createClient(supabaseUrl, serviceRoleKey)
 
       // generated-images 버킷에 저장
       const { data: uploadData, error: uploadError } = await supabase.storage
