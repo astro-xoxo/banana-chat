@@ -1,11 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 
-// Supabase 클라이언트 생성
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+// Supabase 클라이언트 생성 (환경 변수 검증 추가)
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://tcvtwqjphkqeqpawdfvu.supabase.co'
+const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRjdnR3cWpwaGtxZXFwYXdkZnZ1Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NzIzNDEwMSwiZXhwIjoyMDcyODEwMTAxfQ.0XQuW0jT324m_WUtIQJKRSbr4p3su6W-OhBLAGRumMA'
+
+console.log('🔧 Supabase 연결 정보:', {
+  url: supabaseUrl,
+  serviceRoleKey: serviceRoleKey?.substring(0, 20) + '...',
+  hasUrl: !!supabaseUrl,
+  hasKey: !!serviceRoleKey
+})
+
+const supabase = createClient(supabaseUrl, serviceRoleKey)
 
 interface SessionCreateRequest {
   session_id: string
@@ -84,6 +91,14 @@ export async function POST(request: NextRequest): Promise<NextResponse<SessionCr
 
     // 5. 새 세션 DB에 저장
     const currentTime = new Date().toISOString()
+    console.log('💾 INSERT 시도 중:', {
+      session_id,
+      session_id_type: typeof session_id,
+      session_id_length: session_id?.length,
+      created_at: created_at || currentTime,
+      last_activity: last_activity || currentTime
+    })
+
     const { data: newSession, error: insertError } = await supabase
       .from('anonymous_sessions')
       .insert({
@@ -96,9 +111,17 @@ export async function POST(request: NextRequest): Promise<NextResponse<SessionCr
 
     if (insertError || !newSession) {
       console.error('❌ 세션 DB 저장 실패:', insertError)
+      console.error('❌ INSERT 에러 상세:', {
+        code: insertError?.code,
+        message: insertError?.message,
+        details: insertError?.details,
+        hint: insertError?.hint,
+        session_id: session_id,
+        session_id_format: session_id
+      })
       return NextResponse.json({
         success: false,
-        error: '세션 저장에 실패했습니다'
+        error: `세션 저장에 실패했습니다: ${insertError?.message || 'Unknown error'}`
       }, { status: 500 })
     }
 
