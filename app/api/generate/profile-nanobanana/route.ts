@@ -2,9 +2,16 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { createNanoBananaService } from '@/lib/services/nanoBananaService'
 
-// Supabase 클라이언트 생성 (환경 변수 정리)
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim() || 'https://tcvtwqjphkqeqpawdfvu.supabase.co'
-const serviceRoleKey = (process.env.SUPABASE_SERVICE_ROLE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRjdnR3cWpwaGtxZXFwYXdkZnZ1Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NzIzNDEwMSwiZXhwIjoyMDcyODEwMTAxfQ.0XQuW0jT324m_WUtIQJKRSbr4p3su6W-OhBLAGRumMA').replace(/[\n\r\s]/g, '')
+// Supabase 클라이언트 생성 (환경 변수만 사용)
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim() || ''
+const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY?.replace(/[\n\r\s]/g, '') || ''
+
+if (!supabaseUrl || !serviceRoleKey) {
+  console.error('❌ 필수 환경 변수가 설정되지 않았습니다:', {
+    hasSupabaseUrl: !!supabaseUrl,
+    hasServiceRoleKey: !!serviceRoleKey
+  })
+}
 
 const supabase = createClient(supabaseUrl, serviceRoleKey)
 

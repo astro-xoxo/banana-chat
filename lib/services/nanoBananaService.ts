@@ -43,17 +43,15 @@ export class NanoBananaService implements ImageGenerationService {
   private readonly timeout: number = 60000 // 1분 타임아웃
 
   constructor() {
-    // 다양한 환경 변수명을 시도
+    // 다양한 환경 변수명을 시도 (하드코딩된 키 제거됨)
     const possibleKeys = [
       process.env.BANANA_CHAT_API_KEY,
       process.env.NEXT_PUBLIC_NANOBANANA_API_KEY,
       process.env.GEMINI_API_KEY,
-      process.env.GOOGLE_AI_API_KEY,
-      // CLAUDE.md에서 명시된 키
-      'AIzaSyBiPQ2S68gWj6AYNy_Yql1EdEr_K5ME5lA'
+      process.env.GOOGLE_AI_API_KEY
     ].filter(Boolean)
 
-    this.apiKey = possibleKeys[0] || 'AIzaSyBiPQ2S68gWj6AYNy_Yql1EdEr_K5ME5lA'
+    this.apiKey = possibleKeys[0] || ''
     
     console.log('🍌 NanoBanana 환경 변수 체크:', {
       BANANA_CHAT_API_KEY: !!process.env.BANANA_CHAT_API_KEY,
