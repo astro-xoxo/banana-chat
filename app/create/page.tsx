@@ -113,29 +113,44 @@ export default function CreatePage() {
       }
 
       // 챗봇 생성 (NanoBanana API 사용)
+      const requestBody = {
+        session_id: session.sessionId,
+        chatbot_name: formData.name,
+        age: formData.age,
+        gender: formData.gender,
+        relationship: formData.relationship,
+        concept: formData.concept,
+        user_uploaded_image_url: userImageUrl
+      }
+      
+      console.log('🚀 프로필 생성 요청 데이터:', {
+        ...requestBody,
+        session_id_length: session.sessionId?.length,
+        session_id_format: session.sessionId
+      })
+      
       const createResponse = await fetch('/api/generate/profile-nanobanana', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({
-          session_id: session.sessionId,
-          chatbot_name: formData.name,
-          age: formData.age,
-          gender: formData.gender,
-          relationship: formData.relationship,
-          concept: formData.concept,
-          user_uploaded_image_url: userImageUrl
-        })
+        body: JSON.stringify(requestBody)
       })
 
       const result = await createResponse.json()
+      
+      console.log('📥 프로필 생성 응답:', {
+        success: result.success,
+        error: result.error,
+        status: createResponse.status
+      })
 
       if (result.success) {
         setGeneratedChatbotId(result.chatbot_id)
         setProfileImageUrl(result.profile_image_url || '')
         setCurrentStep('complete')
       } else {
+        console.error('❌ 프로필 생성 실패:', result.error)
         throw new Error(result.error || 'Failed to create chatbot')
       }
     } catch (err) {
